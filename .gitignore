@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # Logs
 logs
 *.log
@@ -22,3 +23,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+=======
+
+backend/.plantdoc-venv/
+backend/__pycache__/
+>>>>>>> 3cb2e578ad5c25ded0ef8adff9ecaa4b2b11b718
