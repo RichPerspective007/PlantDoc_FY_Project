@@ -1,9 +1,10 @@
 import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
-import PlantDocChatbot from './PlantDocChatbot.jsx'
+import './index.css'
+import App from './App.jsx'
 
 createRoot(document.getElementById('root')).render(
   <StrictMode>
-    <PlantDocChatbot></PlantDocChatbot>
+    <App />
   </StrictMode>,
 )

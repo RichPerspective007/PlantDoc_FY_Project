@@ -1,0 +1,57 @@
+.shell {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    background: var(--cream)
+}
+
+.shell-head {
+    background: var(--forest);
+    padding: 14px 24px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    border-bottom: 1px solid rgba(255, 255, 255, .06)
+}
+
+.shell-title {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--cream);
+    flex: 1
+}
+
+.ghost {
+    background: rgba(255, 255, 255, .09);
+    border: 1px solid rgba(255, 255, 255, .14);
+    color: rgba(255, 255, 255, .8);
+    padding: 7px 14px;
+    border-radius: var(--rs);
+    cursor: pointer;
+    font-family: var(--f);
+    font-size: 13px;
+    transition: all .18s
+}
+
+.ghost:hover {
+    background: rgba(255, 255, 255, .17)
+}
+
+.chip {
+    background: rgba(90, 124, 90, .25);
+    color: #a8c9a8;
+    padding: 5px 14px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    border: 1px solid rgba(90, 124, 90, .35);
+    transition: all .18s
+}
+
+.chip:hover {
+    background: rgba(90, 124, 90, .36)
+}

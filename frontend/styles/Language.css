@@ -1,0 +1,102 @@
+.lp {
+    min-height: 100vh;
+    background: var(--cream)
+}
+
+.lp-top {
+    background: var(--forest);
+    padding: 18px 40px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between
+}
+
+.lp-body {
+    padding: 56px 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center
+}
+
+.lp-h {
+    font-family: var(--sf);
+    font-size: 34px;
+    color: var(--ink);
+    margin-bottom: 8px;
+    text-align: center
+}
+
+.lp-s {
+    font-size: 15px;
+    color: var(--ink-l);
+    margin-bottom: 38px;
+    text-align: center
+}
+
+.lp-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(158px, 1fr));
+    gap: 13px;
+    width: 100%;
+    max-width: 640px
+}
+
+.lp-card {
+    background: var(--white);
+    border: 2px solid var(--border);
+    border-radius: var(--r);
+    padding: 22px 16px;
+    cursor: pointer;
+    transition: all .18s;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px
+}
+
+.lp-card:hover {
+    border-color: var(--sage-l);
+    transform: translateY(-2px);
+    box-shadow: var(--sh-s)
+}
+
+.lp-card.sel {
+    border-color: var(--sage);
+    background: var(--sage-p);
+    box-shadow: 0 0 0 3px rgba(90, 124, 90, .12)
+}
+
+.lp-flag {
+    font-size: 30px
+}
+
+.lp-nat {
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--ink)
+}
+
+.lp-en {
+    font-size: 12px;
+    color: var(--ink-f)
+}
+
+.lp-go {
+    margin-top: 30px;
+    background: var(--forest);
+    color: var(--white);
+    border: none;
+    padding: 14px 44px;
+    border-radius: 999px;
+    font-family: var(--f);
+    font-size: 15px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .2s
+}
+
+.lp-go:hover {
+    background: var(--sage-m);
+    transform: translateY(-1px)
+}

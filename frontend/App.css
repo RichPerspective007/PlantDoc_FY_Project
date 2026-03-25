@@ -1,0 +1,15 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&family=DM+Serif+Display:ital@0;1&display=swap');
+  *,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+  :root{
+    --sage:#5a7c5a;--sage-l:#7a9e7a;--sage-p:#eef4ee;--sage-m:#3d5c3d;
+    --forest:#1c2e1c;--amber:#c17d3c;--amber-l:#f5c889;--amber-p:#fdf4e7;
+    --cream:#f8f6f0;--parch:#ede9df;--white:#fff;
+    --ink:#1a1a1a;--ink-m:#3d3d3d;--ink-l:#6b6b6b;--ink-f:#a8a8a8;
+    --border:#e0dbd0;--red:#c0392b;--red-p:#fdecea;--yel:#b8860b;--yel-p:#fef9e7;
+    --sh-xs:0 1px 3px rgba(0,0,0,.06);--sh-s:0 2px 8px rgba(0,0,0,.08);
+    --sh-m:0 6px 24px rgba(0,0,0,.1);--sh-l:0 16px 48px rgba(0,0,0,.14);
+    --r:12px;--rs:8px;--rl:20px;
+    --f:'Plus Jakarta Sans',sans-serif;--sf:'DM Serif Display',serif;
+  }
+  body{font-family:var(--f);background:var(--cream);color:var(--ink);-webkit-font-smoothing:antialiased}
+  
