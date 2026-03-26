@@ -1,6 +1,9 @@
 fastapi
 uvicorn
-numpy
-Pillow
-tensorflow
 python-multipart
+Flask
+flask-cors
+numpy
+tensorflow
+pillow
+google-generativeai
