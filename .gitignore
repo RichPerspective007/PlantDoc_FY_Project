@@ -26,3 +26,5 @@ frontend/*.sw?
 
 backend/.plantdoc-venv/
 backend/__pycache__/
+
+backend/.env

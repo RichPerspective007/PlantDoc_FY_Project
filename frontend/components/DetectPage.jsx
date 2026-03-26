@@ -64,8 +64,8 @@ export function DetectPg({ t, lang, back, onLang }) {
       setRes({
         d: data.prediction,
         c: (data.confidence * 100).toFixed(2) + "%",
-        desc: "Detected by AI model",
-        steps: ["Use proper pesticide", "Remove infected leaves"]
+        desc: data.description,   // ✅ clean
+        steps: data.steps         // ✅ already array
       });
 
       setMsgs(p => [

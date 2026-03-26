@@ -6,6 +6,13 @@ import tensorflow as tf
 from tensorflow.keras.models import load_model
 import json
 from io import BytesIO
+import google.generativeai as genai  
+import os
+
+GOOGLE_API_KEY=os.getenv("GOOGLE_API_KEY")
+genai.configure(api_key=GOOGLE_API_KEY)
+
+model_genai=genai.GenerativeModel('gemini-3-flash-preview')
 
 app = Flask(__name__)
 CORS(app)
@@ -51,14 +58,42 @@ def predict():
         label = class_names[index]
         confidence = float(pred[0][index])
 
+        prompt=  f"""
+        Give response in JSON format:
+
+        {{
+        "description": "...",
+        "steps": ["step1", "step2", "step3"]
+        }}
+
+        Disease: {label}
+        """
+
+        gemini_res = model_genai.generate_content(prompt)
+        raw_text = gemini_res.text
+        clean_text = raw_text.strip()
+        if clean_text.startswith("```"):
+            clean_text = clean_text.split("```")[1]
+            if clean_text.startswith("json"):
+                clean_text = clean_text[4:]
+            clean_text = clean_text.strip()
+        try:
+            parsed = json.loads(clean_text)
+        except:
+            parsed = {
+                "description": "No description available",
+                "steps": ["No steps available"]
+            }
+
         return jsonify({
             "prediction": label,
-            "confidence": confidence
+            "confidence": confidence,
+            "description": parsed["description"],
+            "steps": parsed["steps"]
         })
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-
 
 # Home route
 @app.route("/")
