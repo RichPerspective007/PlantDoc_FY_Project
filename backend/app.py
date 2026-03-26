@@ -1,77 +1,71 @@
-from io import BytesIO
+from flask import Flask, request, jsonify
+from flask_cors import CORS
 from PIL import Image
-from fastapi import FastAPI, File, UploadFile
-from fastapi.responses import JSONResponse
-from fastapi.middleware.cors import CORSMiddleware
-import uvicorn
 import numpy as np
 import tensorflow as tf
 from tensorflow.keras.models import load_model
 import json
+from io import BytesIO
+
+app = Flask(__name__)
+CORS(app)
 
 MODEL_PATH = "plant_disease.keras"
 IMAGE_SIZE = 256
+
+# Load model 
 model = load_model(MODEL_PATH)
 
-app = FastAPI()
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-
-model = tf.keras.models.load_model(MODEL_PATH)
-class_names = []
+# Load class names
 with open("class_names.json") as f:
     class_names = json.load(f)
 
-def preprocess_from_upload(file: UploadFile):
-    # Read file bytes
-    img_bytes = file.file.read()
 
-    # Convert bytes → PIL image
+# Preprocess function
+def preprocess_image(file):
+    img_bytes = file.read()
+
     img = Image.open(BytesIO(img_bytes)).convert("RGB")
-
-    # Resize (same as load_img(..., target_size=...))
     img = img.resize((IMAGE_SIZE, IMAGE_SIZE))
 
-    # Convert to array
     img_array = tf.keras.utils.img_to_array(img)
-
-    # Add batch dimension
     img_array = np.expand_dims(img_array, axis=0)
 
-    return img_array, img
+    return img_array
 
-@app.post("/predict")
-async def predict(file: UploadFile = File(...)):
+
+# Prediction 
+@app.route("/predict", methods=["POST"])
+def predict():
     try:
-        img_array, original_img = preprocess_from_upload(file)
+        if "file" not in request.files:
+            return jsonify({"error": "No file uploaded"}), 400
 
-        # Model prediction
+        file = request.files["file"]
+
+        img_array = preprocess_image(file)
+
         pred = model.predict(img_array)
 
         index = np.argmax(pred)
         label = class_names[index]
         confidence = float(pred[0][index])
 
-        return {
+        return jsonify({
             "prediction": label,
             "confidence": confidence
-        }
+        })
+
     except Exception as e:
-        return JSONResponse(
-            status_code=500,
-            content={"error": str(e)}
-        )
+        return jsonify({"error": str(e)}), 500
 
-@app.get("/")
-async def root():
-    return {"message": "Welcome to the Plant Disease Prediction API!"}
 
+# Home route
+@app.route("/")
+def home():
+    return jsonify({"message": "Welcome to the Plant Disease Prediction API!"})
+
+
+# Run Flask
 if __name__ == "__main__":
-    uvicorn.run("app:app", host="0.0.0.0", port=8000)
+    app.run(debug=True, port=5000)
