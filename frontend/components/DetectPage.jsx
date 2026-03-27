@@ -8,6 +8,7 @@ export function DetectPg({ t, lang, back, onLang }) {
   const [drag, setDrag] = useState(false);
   const [busy, setBusy] = useState(false);
   const [res, setRes] = useState(null);
+  
 
   const [msgs, setMsgs] = useState([
     { r: "b", txt: t.chatBotResponses.default }
@@ -84,29 +85,41 @@ export function DetectPg({ t, lang, back, onLang }) {
     }
   };
 
-  // chatbot (same as yours)
-  const send = () => {
-    const m = inp.trim();
-    if (!m) return;
+const send = async () => {
+  const m = inp.trim();
+  if (!m) return;
 
-    setInp("");
+  // clear input + show user message
+  setInp("");
+  setMsgs(prev => [...prev, { r: "u", txt: m }]);
 
-    const lo = m.toLowerCase();
-    let rep = t.chatBotResponses.default;
+  try {
+    const response = await fetch("http://localhost:5000/chat", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        message: m,
+        disease: res?.d || null   // ✅ correct state usage
+      })
+    });
 
-    if (lo.includes("blight") || lo.includes("झुलसा"))
-      rep = t.chatBotResponses.blight;
-    else if (lo.includes("mildew") || lo.includes("भुरी"))
-      rep = t.chatBotResponses.mildew;
-    else if (lo.includes("yellow") || lo.includes("पीली"))
-      rep = t.chatBotResponses.yellowing;
+    const data = await response.json();
 
-    setMsgs(p => [...p, { r: "u", txt: m }]);
+    setMsgs(prev => [
+      ...prev,
+      { r: "b", txt: data.reply || "No response from server" }
+    ]);
 
-    setTimeout(() => {
-      setMsgs(p => [...p, { r: "b", txt: rep }]);
-    }, 700);
-  };
+  } catch (err) {
+    console.error(err);
+    setMsgs(prev => [
+      ...prev,
+      { r: "b", txt: "Server error" }
+    ]);
+  }
+};
 
   return (
     <div className="shell">

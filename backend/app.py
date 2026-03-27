@@ -94,6 +94,19 @@ def predict():
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+    
+#nlp portion updated giving response but response style should be more clean and effective need work here    
+@app.route("/chat",methods=["POST"])
+def gemini_api_chatbot_fun():
+    data=request.json
+    m=data["message"]
+    prompt=f"""
+    generate simplified answers for the farmers for the question {m}
+    """
+    gemini_res=model_genai.generate_content(prompt)
+    raw_text=gemini_res.text
+    clean_text=raw_text.strip()
+    return jsonify({"reply":clean_text})
 
 # Home route
 @app.route("/")
