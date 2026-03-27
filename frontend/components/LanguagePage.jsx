@@ -1,5 +1,5 @@
 import "../styles/Language.css";
-
+import { LANGUAGES } from "../data/LangTrans";
 export function LangPg({t,tl,setTl,ok,back}){
   return(
     <div className="lp">
