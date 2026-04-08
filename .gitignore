@@ -28,3 +28,5 @@ backend/.plantdoc-venv/
 backend/__pycache__/
 
 backend/.env
+
+backend/google_auth_api.json

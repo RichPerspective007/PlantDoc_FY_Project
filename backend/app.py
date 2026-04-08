@@ -8,27 +8,38 @@ import json
 from io import BytesIO
 import google.generativeai as genai  
 import os
+from auth import auth_bp, oauth
 
-GOOGLE_API_KEY=os.getenv("GOOGLE_API_KEY")
+# ---------------- CONFIG ----------------
+
+GOOGLE_API_KEY = os.getenv("GOOGLE_API_KEY")
 genai.configure(api_key=GOOGLE_API_KEY)
 
-model_genai=genai.GenerativeModel('gemini-3-flash-preview')
+model_genai = genai.GenerativeModel('gemini-3-flash-preview')
 
 app = Flask(__name__)
-CORS(app)
+app.secret_key = "super_secret_key"
+
+CORS(app, supports_credentials=True)
+
+
+oauth.init_app(app)
+
+
+app.register_blueprint(auth_bp)
+
+# ---------------- ML MODEL ----------------
 
 MODEL_PATH = "plant_disease.keras"
 IMAGE_SIZE = 256
 
-# Load model 
 model = load_model(MODEL_PATH)
 
-# Load class names
 with open("class_names.json") as f:
     class_names = json.load(f)
 
+# ---------------- PREPROCESS ----------------
 
-# Preprocess function
 def preprocess_image(file):
     img_bytes = file.read()
 
@@ -40,8 +51,8 @@ def preprocess_image(file):
 
     return img_array
 
+# ---------------- PREDICT ----------------
 
-# Prediction 
 @app.route("/predict", methods=["POST"])
 def predict():
     try:
@@ -49,7 +60,6 @@ def predict():
             return jsonify({"error": "No file uploaded"}), 400
 
         file = request.files["file"]
-
         img_array = preprocess_image(file)
 
         pred = model.predict(img_array)
@@ -58,7 +68,7 @@ def predict():
         label = class_names[index]
         confidence = float(pred[0][index])
 
-        prompt=  f"""
+        prompt = f"""
         Give response in JSON format:
 
         {{
@@ -70,15 +80,16 @@ def predict():
         """
 
         gemini_res = model_genai.generate_content(prompt)
-        raw_text = gemini_res.text
-        clean_text = raw_text.strip()
-        if clean_text.startswith("```"):
-            clean_text = clean_text.split("```")[1]
-            if clean_text.startswith("json"):
-                clean_text = clean_text[4:]
-            clean_text = clean_text.strip()
+        raw_text = gemini_res.text.strip()
+
+        if raw_text.startswith("```"):
+            raw_text = raw_text.split("```")[1]
+            if raw_text.startswith("json"):
+                raw_text = raw_text[4:]
+            raw_text = raw_text.strip()
+
         try:
-            parsed = json.loads(clean_text)
+            parsed = json.loads(raw_text)
         except:
             parsed = {
                 "description": "No description available",
@@ -94,26 +105,37 @@ def predict():
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
-    
-#nlp portion updated giving response but response style should be more clean and effective need work here    
-@app.route("/chat",methods=["POST"])
-def gemini_api_chatbot_fun():
-    data=request.json
-    m=data["message"]
-    prompt=f"""
-    generate simplified answers for the farmers for the question {m}
-    """
-    gemini_res=model_genai.generate_content(prompt)
-    raw_text=gemini_res.text
-    clean_text=raw_text.strip()
-    return jsonify({"reply":clean_text})
 
-# Home route
+# ---------------- CHAT ----------------
+
+@app.route("/chat", methods=["POST"])
+def chat():
+    try:
+        data = request.json
+        m = data["message"]
+
+        prompt = f"""
+        Answer clearly for farmers in simple language.
+        Keep it short and practical.
+
+        Question: {m}
+        """
+
+        gemini_res = model_genai.generate_content(prompt)
+        reply = gemini_res.text.strip()
+
+        return jsonify({"reply": reply})
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+# ---------------- HOME ----------------
+
 @app.route("/")
 def home():
-    return jsonify({"message": "Welcome to the Plant Disease Prediction API!"})
+    return jsonify({"message": "PlantDoc API Running"})
 
+# ---------------- RUN ----------------
 
-# Run Flask
 if __name__ == "__main__":
     app.run(debug=True, port=5000)
