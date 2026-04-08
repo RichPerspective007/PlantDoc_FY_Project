@@ -30,3 +30,13 @@ backend/__pycache__/
 backend/.env
 
 backend/google_auth_api.json
+
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# Operating system files
+.DS_Store
+Thumbs.db
