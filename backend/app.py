@@ -10,17 +10,14 @@ import google.generativeai as genai
 import os
 from routes.chat import *
 from routes.prediction import *
-#from auth import auth_bp, oauth
 
 app = Flask(__name__)
 app.secret_key = "super_secret_key"
 
 CORS(app, supports_credentials=True)
 
-#oauth.init_app(app)
 
 
-#app.register_blueprint(auth_bp)
 
 app.register_blueprint(chat_bp)
 app.register_blueprint(prediction_bp)
