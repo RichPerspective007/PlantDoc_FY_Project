@@ -29,9 +29,6 @@ from flask import Flask, request, jsonify, Blueprint
 import os
 from dotenv import load_dotenv
 from pymongo import MongoClient
-from datetime import datetime
-import uuid
-
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.messages import HumanMessage, AIMessage
 from langchain_google_genai import ChatGoogleGenerativeAI
@@ -58,7 +55,7 @@ model = ChatGoogleGenerativeAI(
 
 chat_template = ChatPromptTemplate(
     [
-        ("system", "You are an expert agriculture assistant."),
+        ("system", "You are an expert agriculture assistant and give me reply related to agriculture only nothing else only in just 2 - 5 lines not more that"),
 
         MessagesPlaceholder(variable_name="history"),
 
@@ -108,5 +105,59 @@ def save_messages(user:str,session:str,content:str,role:str):
   )
 
 
-#print(history_finder("sibasish","234"))
-save_messages("swapnil","123","how to remove stain from my bermuda ?","human")
+#one route created for contextual bot reply
+@chat_bp.route("/chat",methods=['POST'])
+def chat():
+  data=request.get_json()
+
+  user=data.get("user_name")
+  session=data.get("session_id")
+  user_input=data.get("message")
+
+  if not all([user,session,user_input]):
+    return jsonify({"errorMessage":"Missing fields"}) , 400
+  
+  history=history_finder(user,session)
+
+  reponse_from_ai=chain.invoke(
+    {
+      "history":history,
+      "input":user_input
+    }
+  )
+
+  ai_reply_actual=reponse_from_ai.content[0]["text"]
+
+  save_messages(user,session,user_input,"human")
+  save_messages(user,session,ai_reply_actual,"ai")
+
+  return jsonify( {
+      "reply":ai_reply_actual,
+      "session_id":session,
+      "user":user
+    } , 201
+  )
+
+
+@chat_bp.route("/showconvolist", methods=["GET"])
+def get_list_ofconvo():
+  user=request.args.get("user_name")
+  
+  sessions_got=col.find(
+    {"user_name":user},
+    {"session_id":1}
+  )
+
+  return jsonify([i["session_id"] for i in sessions_got])
+
+@chat_bp.route("/internalconvo",methods=["GET"])
+def internal_convo_get():
+  user=request.args.get("user_name")
+  session=request.args.get("session_id")
+
+  internal_con=col.find_one(
+    {"user_name":user,"session_id":session},
+    {"messages":1}
+  )
+
+  return jsonify(internal_con.get("messages", []) if internal_con else [])
