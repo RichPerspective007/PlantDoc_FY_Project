@@ -44,8 +44,8 @@ MONGO_URI = os.getenv("MONGO_URI")
 
 
 client = MongoClient(MONGO_URI)
-db = client["plantdoc_demo"]
-col = db["chat_collection"]
+db = client["plantdoc"]
+col = db["chatbot"]
 
 
 chat_bp = Blueprint("chat", __name__)
@@ -109,4 +109,4 @@ def save_messages(user:str,session:str,content:str,role:str):
 
 
 #print(history_finder("sibasish","234"))
-#save_messages("swapnil","123","how to remove stain from my bermuda ?","human")
+save_messages("swapnil","123","how to remove stain from my bermuda ?","human")
