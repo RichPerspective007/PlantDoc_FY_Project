@@ -45,7 +45,7 @@ MONGO_URI = os.getenv("MONGO_URI")
 
 client = MongoClient(MONGO_URI)
 db = client["plantdoc_demo"]
-collection_chat = db["chat_collection"]
+col = db["chat_collection"]
 
 
 chat_bp = Blueprint("chat", __name__)
@@ -68,3 +68,45 @@ chat_template = ChatPromptTemplate(
 
 chain = chat_template | model
 
+"""i assumed that username , sessionid will come as a string in my backend
+    there may be more values that may come from frontend but i just assumed few of them will fix this when the frontend of auth.jsx is ready
+"""
+
+#for giving previous chats to llm model i made this function this will be req in messagePlaceHolder
+def history_finder(user:str,session:str)->list:
+  history=[]
+  doc=col.find_one({
+    "user_name":user,
+    "session_id":session
+  },{"messages":1})
+
+  if doc and "messages" in doc:
+    message_list=doc["messages"]
+    for i in message_list:
+      if i["role"]=="human":
+        history.append(HumanMessage(i["text"]))
+      else:
+        history.append(AIMessage(i["text"]))
+    return history
+  else:
+    return []
+  
+# if a message comes from user / ai that will go in my db for persistence
+def save_messages(user:str,session:str,content:str,role:str):
+  messages={
+    "role":role,
+    "text":content
+  }
+  
+  col.update_one(
+    {"user_name":user,"session_id":session},
+    { "$set"  : {"session_id":session},
+      "$push" : {
+      "messages":{"$each":[messages]}
+      }
+    } , upsert=True
+  )
+
+
+#print(history_finder("sibasish","234"))
+#save_messages("swapnil","123","how to remove stain from my bermuda ?","human")
