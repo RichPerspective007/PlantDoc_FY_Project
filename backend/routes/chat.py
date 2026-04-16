@@ -65,10 +65,6 @@ chat_template = ChatPromptTemplate(
 
 chain = chat_template | model
 
-"""i assumed that username , sessionid will come as a string in my backend
-    there may be more values that may come from frontend but i just assumed few of them will fix this when the frontend of auth.jsx is ready
-"""
-
 def history_finder(user,session):
   history=[]
   doc=col.find_one({
@@ -103,7 +99,6 @@ def save_messages(user,session,content,role):
   )
 
 
-#one route created for contextual bot reply
 @chat_bp.route("/chat",methods=['POST'])
 def chat():
   data=request.get_json()
