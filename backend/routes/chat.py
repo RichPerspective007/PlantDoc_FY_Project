@@ -55,7 +55,7 @@ model = ChatGoogleGenerativeAI(
 
 chat_template = ChatPromptTemplate(
     [
-        ("system", "You are an expert agriculture assistant and give me reply related to agriculture only nothing else only in just 2 - 5 lines not more that"),
+        ("system", "You are an expert agriculture assistant and give me reply related to agriculture only nothing else only in just 2 lines not more that"),
 
         MessagesPlaceholder(variable_name="history"),
 
@@ -69,8 +69,7 @@ chain = chat_template | model
     there may be more values that may come from frontend but i just assumed few of them will fix this when the frontend of auth.jsx is ready
 """
 
-#for giving previous chats to llm model i made this function this will be req in messagePlaceHolder
-def history_finder(user:str,session:str)->list:
+def history_finder(user,session):
   history=[]
   doc=col.find_one({
     "user_name":user,
@@ -87,9 +86,8 @@ def history_finder(user:str,session:str)->list:
     return history
   else:
     return []
-  
-# if a message comes from user / ai that will go in my db for persistence
-def save_messages(user:str,session:str,content:str,role:str):
+
+def save_messages(user,session,content,role):
   messages={
     "role":role,
     "text":content
@@ -135,8 +133,8 @@ def chat():
       "reply":ai_reply_actual,
       "session_id":session,
       "user":user
-    } , 201
-  )
+    } 
+  ) , 201
 
 
 @chat_bp.route("/showconvolist", methods=["GET"])
