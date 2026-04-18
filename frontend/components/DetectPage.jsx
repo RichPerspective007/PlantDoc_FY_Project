@@ -13,6 +13,7 @@ export function DetectPg({ t, lang, back, onLang, user }) {
   const [sessions, setSessions]   = useState([]);
   const [activeSession, setActive]= useState(null);
   const [loadingHist, setLoadingHist] = useState(false);
+  const [typing, setTyping] = useState(false);
 
   const endRef   = useRef();
   const fRef     = useRef();
@@ -111,39 +112,57 @@ export function DetectPg({ t, lang, back, onLang, user }) {
   };
 
   const send = async () => {
-    const m = inp.trim();
-    if (!m) return;
+  const m = inp.trim();
+  if (!m) return;
 
-    setInp("");
-    setMsgs(prev => [...prev, { r: "u", txt: m }]);
+  setInp("");
 
-    try {
-      const response = await fetch("http://localhost:5000/chat", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          message: m,
-          disease: res?.d || null,
-          user_name: user?.name || "Guest",
-          session_id: sessionId.current ,
-          language : lang
-        })
-      });
+  // show user message
+  setMsgs(prev => [...prev, { r: "u", txt: m }]);
 
-      const data = await response.json();
+  // 🟡 START typing indicator
+  setTyping(true);
 
-      // after first message, add this session to sidebar if it's new
-      if (!sessions.includes(sessionId.current)) {
-        setSessions(prev => [sessionId.current, ...prev]);
-        setActive(sessionId.current);
-      }
+  try {
+    const response = await fetch("http://localhost:5000/chat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        message: m,
+        disease: res?.d || null,
+        user_name: user?.name || "Guest",
+        session_id: sessionId.current,
+        language: lang
+      })
+    });
 
-      setMsgs(prev => [...prev, { r: "b", txt: data.reply || "No response from server" }]);
-    } catch (err) {
-      console.error(err);
-      setMsgs(prev => [...prev, { r: "b", txt: "Server error" }]);
+    const data = await response.json();
+
+    // 🔴 STOP typing indicator
+    setTyping(false);
+
+    if (!sessions.includes(sessionId.current)) {
+      setSessions(prev => [sessionId.current, ...prev]);
+      setActive(sessionId.current);
     }
-  };
+
+    setMsgs(prev => [
+      ...prev,
+      { r: "b", txt: data.reply || "No response from server" }
+    ]);
+
+  } catch (err) {
+    console.error(err);
+
+    // 🔴 STOP typing on error too
+    setTyping(false);
+
+    setMsgs(prev => [
+      ...prev,
+      { r: "b", txt: "Server error" }
+    ]);
+  }
+};
 
   return (
     <div className="shell">
@@ -260,6 +279,16 @@ export function DetectPg({ t, lang, back, onLang, user }) {
                 <div className="cb">{m.txt}</div>
               </div>
             ))}
+            {/* 🟡 TYPING INDICATOR */}
+            {typing && (
+              <div className="cm b">
+                <div className="cb typing">
+                  <span></span>
+                  <span></span>
+                  <span></span>
+                </div>
+              </div>
+            )}
             <div ref={endRef} />
           </div>
           <div className="chat-bar">
