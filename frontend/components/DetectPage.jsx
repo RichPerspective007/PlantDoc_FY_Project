@@ -125,7 +125,8 @@ export function DetectPg({ t, lang, back, onLang, user }) {
           message: m,
           disease: res?.d || null,
           user_name: user?.name || "Guest",
-          session_id: sessionId.current
+          session_id: sessionId.current ,
+          language : lang
         })
       });
 

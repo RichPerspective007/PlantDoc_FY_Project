@@ -55,7 +55,7 @@ model = ChatGoogleGenerativeAI(
 
 chat_template = ChatPromptTemplate(
     [
-        ("system", "You are an expert agriculture assistant and give me reply related to agriculture only nothing else only in just 2 lines not more that"),
+        ("system", "You are an expert agriculture assistant and give me reply related to agriculture only nothing else only in just 2 lines not more that and always reply in {language} ."),
 
         MessagesPlaceholder(variable_name="history"),
 
@@ -106,6 +106,8 @@ def chat():
   user=data.get("user_name")
   session=data.get("session_id")
   user_input=data.get("message")
+  selected_language=data.get("language")
+
 
   if not all([user,session,user_input]):
     return jsonify({"errorMessage":"Missing fields"}) , 400
@@ -115,7 +117,8 @@ def chat():
   reponse_from_ai=chain.invoke(
     {
       "history":history,
-      "input":user_input
+      "input":user_input,
+      "language" : selected_language or "English"
     }
   )
 
