@@ -1,30 +1,50 @@
-import { useState, useRef, useEffect, useMemo } from "react";
+import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { LANGUAGES } from "../data/LangTrans";
 
 export function DetectPg({ t, lang, back, onLang, user }) {
 
-  const [img, setImg]             = useState(null);
-  const [file, setFile]           = useState(null);
-  const [drag, setDrag]           = useState(false);
-  const [busy, setBusy]           = useState(false);
-  const [res, setRes]             = useState(null);
-  const [msgs, setMsgs]           = useState([{ r: "b", txt: t.chatBotResponses.default }]);
-  const [inp, setInp]             = useState("");
-  const [sessions, setSessions]   = useState([]);
-  const [activeSession, setActive]= useState(null);
+  const [img, setImg]               = useState(null);
+  const [file, setFile]             = useState(null);
+  const [drag, setDrag]             = useState(false);
+  const [busy, setBusy]             = useState(false);
+  const [res, setRes]               = useState(null);
+  const [msgs, setMsgs]             = useState([{ r: "b", txt: t.chatBotResponses.default }]);
+  const [inp, setInp]               = useState("");
+  const [sessions, setSessions]     = useState([]);
+  const [activeSession, setActive]  = useState(null);
   const [loadingHist, setLoadingHist] = useState(false);
-  const [typing, setTyping] = useState(false);
+  const [typing, setTyping]         = useState(false);
 
-  const endRef   = useRef();
-  const fRef     = useRef();
+  // voice states
+  const [listening, setListening]   = useState(false);
+  const [voiceSupported, setVoiceSupported] = useState(false);
+
+  // camera states
+  const [camOpen, setCamOpen]       = useState(false);
+  const [camReady, setCamReady]     = useState(false);
+  const [camError, setCamError]     = useState(null);
+  const [flashActive, setFlashActive] = useState(false);
+
+  const endRef    = useRef();
+  const fRef      = useRef();
   const sessionId = useRef(crypto.randomUUID());
+  const recognRef = useRef(null);
+  const videoRef  = useRef();
+  const canvasRef = useRef();
+  const streamRef = useRef(null);
 
   const c = useMemo(() => LANGUAGES.find(l => l.code === lang), [lang]);
+
+  // check voice support on mount
+  useEffect(() => {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    setVoiceSupported(!!SR);
+  }, []);
 
   // scroll to bottom on new message
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [msgs]);
+  }, [msgs, typing]);
 
   // fetch session list on mount
   useEffect(() => {
@@ -37,6 +57,12 @@ export function DetectPg({ t, lang, back, onLang, user }) {
       .finally(() => setLoadingHist(false));
   }, [user]);
 
+  // cleanup camera stream on unmount
+  useEffect(() => {
+    return () => stopStream();
+  }, []);
+
+  // ── FILE LOAD ──
   const load = (f) => {
     if (!f) return;
     setFile(f);
@@ -50,7 +76,7 @@ export function DetectPg({ t, lang, back, onLang, user }) {
     load(e.dataTransfer.files[0]);
   };
 
-  // load a past session when clicked in sidebar
+  // ── SESSION MANAGEMENT ──
   const loadSession = async (sid) => {
     setActive(sid);
     try {
@@ -62,13 +88,12 @@ export function DetectPg({ t, lang, back, onLang, user }) {
         r: m.role === "human" ? "u" : "b",
         txt: m.text
       })));
-      sessionId.current = sid; // continue chatting in same session
+      sessionId.current = sid;
     } catch (err) {
       console.error(err);
     }
   };
 
-  // start a brand new session
   const newSession = () => {
     setActive(null);
     sessionId.current = crypto.randomUUID();
@@ -78,27 +103,24 @@ export function DetectPg({ t, lang, back, onLang, user }) {
     setRes(null);
   };
 
+  // ── ANALYZE ──
   const analyze = async () => {
     if (!file) return;
     setBusy(true);
     try {
       const formData = new FormData();
       formData.append("file", file);
-
       const response = await fetch("http://localhost:5000/predict", {
         method: "POST",
         body: formData
       });
-
       const data = await response.json();
-
       setRes({
         d: data.prediction,
         c: (data.confidence * 100).toFixed(2) + "%",
         desc: data.description,
         steps: data.steps
       });
-
       setMsgs(p => [
         ...p,
         { r: "b", txt: `🔬 ${data.prediction} (${(data.confidence * 100).toFixed(2)}%)` }
@@ -111,58 +133,135 @@ export function DetectPg({ t, lang, back, onLang, user }) {
     }
   };
 
+  // ── CHAT SEND ──
   const send = async () => {
-  const m = inp.trim();
-  if (!m) return;
-
-  setInp("");
-
-  // show user message
-  setMsgs(prev => [...prev, { r: "u", txt: m }]);
-
-  // 🟡 START typing indicator
-  setTyping(true);
-
-  try {
-    const response = await fetch("http://localhost:5000/chat", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        message: m,
-        disease: res?.d || null,
-        user_name: user?.name || "Guest",
-        session_id: sessionId.current,
-        language: lang
-      })
-    });
-
-    const data = await response.json();
-
-    // 🔴 STOP typing indicator
-    setTyping(false);
-
-    if (!sessions.includes(sessionId.current)) {
-      setSessions(prev => [sessionId.current, ...prev]);
-      setActive(sessionId.current);
+    const m = inp.trim();
+    if (!m) return;
+    setInp("");
+    setMsgs(prev => [...prev, { r: "u", txt: m }]);
+    setTyping(true);
+    try {
+      const response = await fetch("http://localhost:5000/chat", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message: m,
+          disease: res?.d || null,
+          user_name: user?.name || "Guest",
+          session_id: sessionId.current,
+          language: lang
+        })
+      });
+      const data = await response.json();
+      setTyping(false);
+      if (!sessions.includes(sessionId.current)) {
+        setSessions(prev => [sessionId.current, ...prev]);
+        setActive(sessionId.current);
+      }
+      setMsgs(prev => [...prev, { r: "b", txt: data.reply || "No response from server" }]);
+    } catch (err) {
+      console.error(err);
+      setTyping(false);
+      setMsgs(prev => [...prev, { r: "b", txt: "Server error" }]);
     }
+  };
 
-    setMsgs(prev => [
-      ...prev,
-      { r: "b", txt: data.reply || "No response from server" }
-    ]);
+  // ── VOICE INPUT ──
+  const startVoice = useCallback(() => {
+    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+    if (!SR) return;
+    const recognition = new SR();
+    // map app language to BCP-47 locale for recognition
+    recognition.lang = lang === "hi" ? "hi-IN"
+                     : lang === "bn" ? "bn-IN"
+                     : lang === "te" ? "te-IN"
+                     : lang === "ta" ? "ta-IN"
+                     : lang === "mr" ? "mr-IN"
+                     : "en-US";
+    recognition.continuous      = false;
+    recognition.interimResults  = false;
+    recognition.maxAlternatives = 1;
 
-  } catch (err) {
-    console.error(err);
+    recognition.onstart  = () => setListening(true);
+    recognition.onend    = () => setListening(false);
+    recognition.onerror  = () => setListening(false);
+    recognition.onresult = (e) => {
+      const transcript = e.results[0][0].transcript;
+      setInp(prev => prev ? prev + " " + transcript : transcript);
+    };
+    recognRef.current = recognition;
+    recognition.start();
+  }, [lang]);
 
-    // 🔴 STOP typing on error too
-    setTyping(false);
+  const stopVoice = useCallback(() => {
+    recognRef.current?.stop();
+    setListening(false);
+  }, []);
 
-    setMsgs(prev => [
-      ...prev,
-      { r: "b", txt: "Server error" }
-    ]);
-  }
-};
+  const toggleVoice = () => {
+    if (listening) stopVoice();
+    else startVoice();
+  };
+
+  // ── CAMERA ──
+  const stopStream = () => {
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
+  };
+
+  const openCamera = async () => {
+    setCamError(null);
+    setCamOpen(true);
+    setCamReady(false);
+    try {
+      const stream = await navigator.mediaDevices.getUserMedia({
+        video: {
+          facingMode: "environment",  // rear camera on mobile
+          width:  { ideal: 1280 },
+          height: { ideal: 720  }
+        }
+      });
+      streamRef.current = stream;
+      if (videoRef.current) {
+        videoRef.current.srcObject = stream;
+        videoRef.current.onloadedmetadata = () => setCamReady(true);
+      }
+    } catch (err) {
+      setCamError("Camera access denied. Please allow camera permission and try again.");
+      console.error(err);
+    }
+  };
+
+  const closeCamera = () => {
+    stopStream();
+    setCamOpen(false);
+    setCamReady(false);
+    setCamError(null);
+  };
+
+  const capturePhoto = () => {
+    if (!videoRef.current || !canvasRef.current) return;
+    // flash animation
+    setFlashActive(true);
+    setTimeout(() => setFlashActive(false), 200);
+
+    const video  = videoRef.current;
+    const canvas = canvasRef.current;
+    canvas.width  = video.videoWidth;
+    canvas.height = video.videoHeight;
+
+    const ctx = canvas.getContext("2d");
+    ctx.drawImage(video, 0, 0);
+
+    canvas.toBlob((blob) => {
+      if (!blob) return;
+      const capturedFile = new File([blob], "camera-capture.jpg", { type: "image/jpeg" });
+      load(capturedFile);
+      closeCamera();
+    }, "image/jpeg", 0.92);
+  };
 
   return (
     <div className="shell">
@@ -210,23 +309,33 @@ export function DetectPg({ t, lang, back, onLang, user }) {
         <div className="det-main">
 
           {!img ? (
-            <div
-              className={`dropzone${drag ? " over" : ""}`}
-              onDragOver={e => { e.preventDefault(); setDrag(true); }}
-              onDragLeave={() => setDrag(false)}
-              onDrop={drop}
-              onClick={() => fRef.current.click()}
-            >
-              <span className="dz-icon">🍃</span>
-              <div className="dz-t">{t.uploadPrompt}</div>
-              <div className="dz-s">{t.uploadSub}</div>
-              <input
-                ref={fRef}
-                type="file"
-                accept="image/*"
-                style={{ display: "none" }}
-                onChange={e => load(e.target.files[0])}
-              />
+            <div className="upload-row">
+              {/* file upload card */}
+              <div
+                className={`dropzone${drag ? " over" : ""}`}
+                onDragOver={e => { e.preventDefault(); setDrag(true); }}
+                onDragLeave={() => setDrag(false)}
+                onDrop={drop}
+                onClick={() => fRef.current.click()}
+              >
+                <span className="dz-icon">🍃</span>
+                <div className="dz-t">{t.uploadPrompt}</div>
+                <div className="dz-s">{t.uploadSub}</div>
+                <input
+                  ref={fRef}
+                  type="file"
+                  accept="image/*"
+                  style={{ display: "none" }}
+                  onChange={e => load(e.target.files[0])}
+                />
+              </div>
+
+              {/* camera card */}
+              <div className="cam-card" onClick={openCamera}>
+                <span className="dz-icon">📷</span>
+                <div className="dz-t">Use Camera</div>
+                <div className="dz-s">Capture live photo</div>
+              </div>
             </div>
           ) : (
             <div className="img-wrap">
@@ -241,11 +350,10 @@ export function DetectPg({ t, lang, back, onLang, user }) {
           )}
 
           <button className="ana-btn" onClick={analyze} disabled={!file || busy}>
-            {busy ? (
-              <><span className="spin">⏳</span> {t.analyzing}</>
-            ) : (
-              `🧬 ${t.analyze}`
-            )}
+            {busy
+              ? <><span className="spin">⏳</span> {t.analyzing}</>
+              : `🧬 ${t.analyze}`
+            }
           </button>
 
           {res && (
@@ -273,37 +381,108 @@ export function DetectPg({ t, lang, back, onLang, user }) {
             <div className="dot" />
             AgriBot 🤖
           </div>
+
           <div className="chat-msgs">
             {msgs.map((m, i) => (
               <div key={i} className={`cm ${m.r}`}>
                 <div className="cb">{m.txt}</div>
               </div>
             ))}
-            {/* 🟡 TYPING INDICATOR */}
             {typing && (
               <div className="cm b">
                 <div className="cb typing">
-                  <span></span>
-                  <span></span>
-                  <span></span>
+                  <span></span><span></span><span></span>
                 </div>
               </div>
             )}
             <div ref={endRef} />
           </div>
+
           <div className="chat-bar">
             <input
               className="chat-in"
-              placeholder={t.chatPlaceholder}
+              placeholder={listening ? "🎙️ Listening..." : t.chatPlaceholder}
               value={inp}
               onChange={e => setInp(e.target.value)}
               onKeyDown={e => e.key === "Enter" && send()}
             />
+            {voiceSupported && (
+              <button
+                className={`voice-btn${listening ? " listening" : ""}`}
+                onClick={toggleVoice}
+                title={listening ? "Stop" : "Speak"}
+              >
+                {listening ? "⏹" : "🎙️"}
+              </button>
+            )}
             <button className="chat-go" onClick={send}>↑</button>
           </div>
         </div>
 
       </div>
+
+      {/* ── CAMERA MODAL ── */}
+      {camOpen && (
+        <div className="cam-overlay" onClick={e => e.target === e.currentTarget && closeCamera()}>
+          <div className="cam-modal">
+
+            <div className="cam-header">
+              <span className="cam-title">📷 Camera</span>
+              <button className="cam-close" onClick={closeCamera}>✕</button>
+            </div>
+
+            <div className="cam-body">
+              {camError ? (
+                <div className="cam-error">
+                  <div className="cam-error-icon">🚫</div>
+                  <p>{camError}</p>
+                  <button className="cam-retry" onClick={openCamera}>Retry</button>
+                </div>
+              ) : (
+                <>
+                  {flashActive && <div className="cam-flash" />}
+                  {!camReady && (
+                    <div className="cam-loading">
+                      <div className="cam-spinner" />
+                      <p>Starting camera...</p>
+                    </div>
+                  )}
+                  <video
+                    ref={videoRef}
+                    autoPlay
+                    playsInline
+                    muted
+                    className="cam-video"
+                    style={{ display: camReady ? "block" : "none" }}
+                  />
+                  {camReady && (
+                    <div className="cam-viewfinder">
+                      <div className="vf-corner tl" />
+                      <div className="vf-corner tr" />
+                      <div className="vf-corner bl" />
+                      <div className="vf-corner br" />
+                    </div>
+                  )}
+                </>
+              )}
+            </div>
+
+            {camReady && !camError && (
+              <div className="cam-footer">
+                <p className="cam-hint">Point at the leaf and capture</p>
+                <button className="cam-capture" onClick={capturePhoto}>
+                  <span className="cam-btn-ring">
+                    <span className="cam-btn-inner" />
+                  </span>
+                </button>
+              </div>
+            )}
+
+            <canvas ref={canvasRef} style={{ display: "none" }} />
+          </div>
+        </div>
+      )}
+
     </div>
   );
 }

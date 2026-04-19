@@ -508,3 +508,302 @@
   0%, 80%, 100% { opacity: 0; }
   40% { opacity: 1; }
 }
+
+/* ===== UPLOAD ROW (dropzone + camera side by side) ===== */
+.upload-row {
+    display: flex;
+    gap: 16px;
+}
+
+.upload-row .dropzone {
+    flex: 1;
+}
+
+/* ===== CAMERA CARD (mirrors dropzone style) ===== */
+.cam-card {
+    flex: 1;
+    border: 2px dashed rgba(59, 130, 246, 0.35);
+    border-radius: 20px;
+    padding: 56px 24px;
+    text-align: center;
+    cursor: pointer;
+    transition: all .3s ease;
+    background: rgba(255,255,255,0.75);
+    backdrop-filter: blur(8px);
+    box-shadow: 0 2px 12px rgba(0,0,0,0.04);
+}
+
+.cam-card:hover {
+    border-color: #3b82f6;
+    background: rgba(59,130,246,0.06);
+    transform: translateY(-4px);
+    box-shadow: 0 14px 32px rgba(59,130,246,0.12);
+}
+
+/* ===== VOICE BUTTON ===== */
+.voice-btn {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    border: 1px solid rgba(0,0,0,0.1);
+    background: rgba(255,255,255,0.9);
+    cursor: pointer;
+    font-size: 16px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: all .2s ease;
+}
+
+.voice-btn:hover {
+    background: rgba(76,175,80,0.1);
+    border-color: #4caf50;
+    transform: scale(1.08);
+}
+
+/* pulsing red ring when actively listening */
+.voice-btn.listening {
+    background: rgba(239,68,68,0.1);
+    border-color: #ef4444;
+    animation: mic-pulse 1.2s ease infinite;
+}
+
+@keyframes mic-pulse {
+    0%,100% { box-shadow: 0 0 0 0   rgba(239,68,68,0.35); }
+    50%      { box-shadow: 0 0 0 7px rgba(239,68,68,0);    }
+}
+
+/* ===== CAMERA MODAL OVERLAY ===== */
+.cam-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.75);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    backdrop-filter: blur(4px);
+    animation: fadeIn .2s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+/* ===== CAMERA MODAL BOX ===== */
+.cam-modal {
+    background: #111;
+    border-radius: 20px;
+    overflow: hidden;
+    width: min(520px, 95vw);
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 24px 60px rgba(0,0,0,0.5);
+    animation: slideUp .25s ease;
+}
+
+@keyframes slideUp {
+    from { transform: translateY(30px); opacity: 0; }
+    to   { transform: translateY(0);    opacity: 1; }
+}
+
+/* modal header */
+.cam-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 14px 18px;
+    background: rgba(255,255,255,0.05);
+    border-bottom: 1px solid rgba(255,255,255,0.08);
+}
+
+.cam-title {
+    color: #fff;
+    font-size: 15px;
+    font-weight: 600;
+    letter-spacing: 0.2px;
+}
+
+.cam-close {
+    background: rgba(255,255,255,0.1);
+    border: none;
+    color: #ccc;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 13px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all .2s;
+}
+
+.cam-close:hover {
+    background: rgba(255,255,255,0.2);
+    color: #fff;
+}
+
+/* modal video area */
+.cam-body {
+    position: relative;
+    background: #000;
+    min-height: 280px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.cam-video {
+    width: 100%;
+    display: block;
+    max-height: 360px;
+    object-fit: cover;
+}
+
+/* white flash on capture */
+.cam-flash {
+    position: absolute;
+    inset: 0;
+    background: white;
+    opacity: 0.85;
+    pointer-events: none;
+    animation: flash .2s ease forwards;
+    z-index: 10;
+}
+
+@keyframes flash {
+    from { opacity: 0.85; }
+    to   { opacity: 0;    }
+}
+
+/* corner viewfinder brackets */
+.cam-viewfinder {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+}
+
+.vf-corner {
+    position: absolute;
+    width: 22px;
+    height: 22px;
+    border-color: rgba(255,255,255,0.8);
+    border-style: solid;
+}
+
+.vf-corner.tl { top: 16px;    left: 16px;    border-width: 2px 0 0 2px; border-radius: 4px 0 0 0; }
+.vf-corner.tr { top: 16px;    right: 16px;   border-width: 2px 2px 0 0; border-radius: 0 4px 0 0; }
+.vf-corner.bl { bottom: 16px; left: 16px;    border-width: 0 0 2px 2px; border-radius: 0 0 0 4px; }
+.vf-corner.br { bottom: 16px; right: 16px;   border-width: 0 2px 2px 0; border-radius: 0 0 4px 0; }
+
+/* loading state */
+.cam-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 14px;
+    color: #888;
+    font-size: 13px;
+    padding: 48px;
+}
+
+.cam-spinner {
+    width: 32px;
+    height: 32px;
+    border: 3px solid rgba(255,255,255,0.1);
+    border-top-color: rgba(255,255,255,0.6);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+}
+
+/* error state */
+.cam-error {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    color: #ccc;
+    font-size: 13px;
+    text-align: center;
+    padding: 40px 24px;
+}
+
+.cam-error-icon { font-size: 36px; }
+
+.cam-retry {
+    margin-top: 4px;
+    padding: 8px 20px;
+    border-radius: 999px;
+    border: 1px solid rgba(255,255,255,0.2);
+    background: rgba(255,255,255,0.08);
+    color: #fff;
+    font-size: 13px;
+    cursor: pointer;
+    transition: all .2s;
+}
+
+.cam-retry:hover {
+    background: rgba(255,255,255,0.15);
+}
+
+/* modal footer with shutter button */
+.cam-footer {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 18px 24px 22px;
+    background: rgba(255,255,255,0.04);
+    border-top: 1px solid rgba(255,255,255,0.07);
+}
+
+.cam-hint {
+    font-size: 12px;
+    color: #777;
+    letter-spacing: 0.3px;
+}
+
+/* shutter button */
+.cam-capture {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform .15s ease;
+}
+
+.cam-capture:active { transform: scale(0.93); }
+
+.cam-btn-ring {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    border: 3px solid rgba(255,255,255,0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: border-color .2s;
+}
+
+.cam-capture:hover .cam-btn-ring {
+    border-color: #fff;
+}
+
+.cam-btn-inner {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: #fff;
+    display: block;
+    transition: background .2s;
+}
+
+.cam-capture:hover .cam-btn-inner {
+    background: #e0e0e0;
+}
