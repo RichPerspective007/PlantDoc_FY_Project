@@ -290,18 +290,23 @@
 .chat-msgs {
     flex: 1;
     overflow-y: auto;
+    min-height: 0;          /* 👈 already there, keep it */
     padding: 14px 12px;
     display: flex;
     flex-direction: column;
     gap: 10px;
-    scrollbar-width: thin;
-    scrollbar-color: rgba(0,0,0,0.1) transparent;
+
+    /* 👇 add this */
+    overflow-x: hidden;
 }
 
 .chat-msgs::-webkit-scrollbar { width: 4px; }
 .chat-msgs::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.1); border-radius: 10px; }
 
-.cm { display: flex; }
+.cm {
+    display: flex;
+    min-width: 0;     /* 👈 prevents flex children from overflowing */
+}
 .cm.u { justify-content: flex-end; }
 .cm.b { justify-content: flex-start; }
 
@@ -312,6 +317,11 @@
     font-size: 13px;
     line-height: 1.55;
     animation: fadeUp .22s ease;
+
+    /* 👇 add these 3 lines */
+    word-wrap: break-word;
+    overflow-wrap: break-word;
+    white-space: pre-wrap;
 }
 
 .cm.u .cb {
