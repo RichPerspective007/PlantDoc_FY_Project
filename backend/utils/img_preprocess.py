@@ -16,13 +16,15 @@ def preprocess_image(file):
         raise
     print(f"Image opened: {img.size}, mode: {img.mode}")
     try:
-        img = img.resize((IMAGE_SIZE, IMAGE_SIZE))
-        print(f"Image resized: {img.size}")
+        img1 = img.resize((224, 224))
+        img2 = img.resize((256, 256), resample=Image.BICUBIC)
     except Exception as e:
         print(f"Error resizing image: {e}")
         raise
 
-    img_array = tf.keras.utils.img_to_array(img)
-    img_array = np.expand_dims(img_array, axis=0)
+    img_array1 = tf.keras.utils.img_to_array(img1)
+    img_array1 = np.expand_dims(img_array1, axis=0)
+    img_array2 = tf.keras.utils.img_to_array(img2)
+    img_array2 = np.expand_dims(img_array2, axis=0)
 
-    return img_array
+    return img_array1, img_array2

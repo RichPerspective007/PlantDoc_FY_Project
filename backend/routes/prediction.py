@@ -5,16 +5,21 @@ from tensorflow.keras.models import load_model
 import json
 from utils.img_preprocess import preprocess_image
 from utils.model_genai_external import get_model_genai
+from utils.load_leafnonleaf import get_leaf_nonleaf_model, get_prediction_model
 import numpy as np
 model_genai = get_model_genai()
 
 prediction_bp = Blueprint("prediction_bp", __name__)
 
-MODEL_PATH = os.path.join(os.path.dirname(prediction_bp.root_path), "model", "plant_disease.keras")
+#LEAF_VS_NONLEAF_MODEL_PATH = os.path.join(os.path.dirname(prediction_bp.root_path), "model", "best_leaf_model.keras")
+#leaf_nonleaf_model = load_model(LEAF_VS_NONLEAF_MODEL_PATH)
+leaf_nonleaf_model = get_leaf_nonleaf_model()
+#MODEL_PATH = os.path.join(os.path.dirname(prediction_bp.root_path), "model", "plant_disease.keras")
 IMAGE_SIZE = 256
 
 # Load model 
-model = load_model(MODEL_PATH)
+#model = load_model(MODEL_PATH)
+model = get_prediction_model()  # Load the plant disease model
 
 # Load class names
 with open(os.path.join(os.path.dirname(prediction_bp.root_path), "data", "class_names.json")) as f:
@@ -27,7 +32,15 @@ def predict():
             return jsonify({"error": "No file uploaded"}), 400
 
         file = request.files["file"]
-        img_array = preprocess_image(file)
+        img_lnl_array, img_array = preprocess_image(file)  # Use smaller size for leaf vs non-leaf model
+        lnl_pred = leaf_nonleaf_model.predict(img_lnl_array)
+        if lnl_pred[0][0] > 0.5:
+            return jsonify({
+                "prediction": "Not a leaf",
+                "confidence": float(1 - lnl_pred[0][0]),
+                "description": "The uploaded image does not appear to be a leaf.",
+                "steps": []
+            })
 
         pred = model.predict(img_array)
 
