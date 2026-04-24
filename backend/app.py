@@ -10,17 +10,22 @@ import google.generativeai as genai
 import os
 from routes.chat import *
 from routes.prediction import *
+from routes.verification import start_verification_bp, check_verification_bp
+from utils.cacheinstance import cache
 
 app = Flask(__name__)
 app.secret_key = "super_secret_key"
 
 CORS(app, supports_credentials=True)
+cache.init_app(app)
 
 
 
 
 app.register_blueprint(chat_bp)
 app.register_blueprint(prediction_bp)
+app.register_blueprint(start_verification_bp)
+app.register_blueprint(check_verification_bp)
 CORS(app) 
 
 # ---------------- HOME ----------------

@@ -25,7 +25,7 @@
 #     except Exception as e:
 #         return jsonify({"error": str(e)}), 500
 
-from flask import Flask, request, jsonify, Blueprint
+from flask import request, jsonify, Blueprint
 import os
 from dotenv import load_dotenv
 from pymongo import MongoClient
