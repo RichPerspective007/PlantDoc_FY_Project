@@ -3,33 +3,33 @@ import { LANGUAGES } from "../data/LangTrans";
 
 export function DetectPg({ t, lang, back, onLang, user }) {
 
-  const [img, setImg]               = useState(null);
-  const [file, setFile]             = useState(null);
-  const [drag, setDrag]             = useState(false);
-  const [busy, setBusy]             = useState(false);
-  const [res, setRes]               = useState(null);
-  const [msgs, setMsgs]             = useState([{ r: "b", txt: t.chatBotResponses.default }]);
-  const [inp, setInp]               = useState("");
-  const [sessions, setSessions]     = useState([]);
-  const [activeSession, setActive]  = useState(null);
+  const [img, setImg] = useState(null);
+  const [file, setFile] = useState(null);
+  const [drag, setDrag] = useState(false);
+  const [busy, setBusy] = useState(false);
+  const [res, setRes] = useState(null);
+  const [msgs, setMsgs] = useState([{ r: "b", txt: t.chatBotResponses.default }]);
+  const [inp, setInp] = useState("");
+  const [sessions, setSessions] = useState([]);
+  const [activeSession, setActive] = useState(null);
   const [loadingHist, setLoadingHist] = useState(false);
-  const [typing, setTyping]         = useState(false);
+  const [typing, setTyping] = useState(false);
 
   // voice states
-  const [listening, setListening]   = useState(false);
+  const [listening, setListening] = useState(false);
   const [voiceSupported, setVoiceSupported] = useState(false);
 
   // camera states
-  const [camOpen, setCamOpen]       = useState(false);
-  const [camReady, setCamReady]     = useState(false);
-  const [camError, setCamError]     = useState(null);
+  const [camOpen, setCamOpen] = useState(false);
+  const [camReady, setCamReady] = useState(false);
+  const [camError, setCamError] = useState(null);
   const [flashActive, setFlashActive] = useState(false);
 
-  const endRef    = useRef();
-  const fRef      = useRef();
+  const endRef = useRef();
+  const fRef = useRef();
   const sessionId = useRef(crypto.randomUUID());
   const recognRef = useRef(null);
-  const videoRef  = useRef();
+  const videoRef = useRef();
   const canvasRef = useRef();
   const streamRef = useRef(null);
 
@@ -173,18 +173,18 @@ export function DetectPg({ t, lang, back, onLang, user }) {
     const recognition = new SR();
     // map app language to BCP-47 locale for recognition
     recognition.lang = lang === "hi" ? "hi-IN"
-                     : lang === "bn" ? "bn-IN"
-                     : lang === "te" ? "te-IN"
-                     : lang === "ta" ? "ta-IN"
-                     : lang === "mr" ? "mr-IN"
-                     : "en-US";
-    recognition.continuous      = false;
-    recognition.interimResults  = false;
+      : lang === "bn" ? "bn-IN"
+        : lang === "te" ? "te-IN"
+          : lang === "ta" ? "ta-IN"
+            : lang === "mr" ? "mr-IN"
+              : "en-US";
+    recognition.continuous = false;
+    recognition.interimResults = false;
     recognition.maxAlternatives = 1;
 
-    recognition.onstart  = () => setListening(true);
-    recognition.onend    = () => setListening(false);
-    recognition.onerror  = () => setListening(false);
+    recognition.onstart = () => setListening(true);
+    recognition.onend = () => setListening(false);
+    recognition.onerror = () => setListening(false);
     recognition.onresult = (e) => {
       const transcript = e.results[0][0].transcript;
       setInp(prev => prev ? prev + " " + transcript : transcript);
@@ -219,8 +219,8 @@ export function DetectPg({ t, lang, back, onLang, user }) {
       const stream = await navigator.mediaDevices.getUserMedia({
         video: {
           facingMode: "environment",  // rear camera on mobile
-          width:  { ideal: 1280 },
-          height: { ideal: 720  }
+          width: { ideal: 1280 },
+          height: { ideal: 720 }
         }
       });
       streamRef.current = stream;
@@ -247,9 +247,9 @@ export function DetectPg({ t, lang, back, onLang, user }) {
     setFlashActive(true);
     setTimeout(() => setFlashActive(false), 200);
 
-    const video  = videoRef.current;
+    const video = videoRef.current;
     const canvas = canvasRef.current;
-    canvas.width  = video.videoWidth;
+    canvas.width = video.videoWidth;
     canvas.height = video.videoHeight;
 
     const ctx = canvas.getContext("2d");
@@ -269,6 +269,21 @@ export function DetectPg({ t, lang, back, onLang, user }) {
       <div className="shell-head">
         <button className="ghost" onClick={back}>{t.back}</button>
         <span className="shell-title">🔬 {t.detectTitle}</span>
+        <div
+          style={{
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+            fontSize: "11px",
+            fontWeight: "600",
+            color: "#14532d",
+            background: "#dcfce7",
+            padding: "3px 8px",
+            borderRadius: "999px"
+          }}
+        >
+          👤 {user?.name}
+        </div>
         <button
           className="chip"
           onClick={() => {
