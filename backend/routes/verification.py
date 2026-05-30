@@ -28,18 +28,22 @@ def start_verify():
 
 check_verification_bp = Blueprint("check_verification_bp", __name__)
 
-# To finish: User enters code -> You check with Twilio
 @check_verification_bp.route('/check-verify', methods=['POST'])
 def check_verify():
+
     name = request.json.get("name")
     phone = request.json.get('phone_number')
     code = request.json.get('otp_code')
-    
-    verification_check = client.verify.v2.services(os.getenv('TWILIO_VERIFY_SID')).verification_checks.create(to=phone, code=code)
-    
+
+    verification_check = client.verify.v2.services(
+        os.getenv('TWILIO_VERIFY_SID')
+    ).verification_checks.create(
+        to=phone,
+        code=code
+    )
+
     if verification_check.status == 'approved':
-        # Now you can create a session or token for the user to keep them logged in
-        # Check if user already exists
+
         existing_user = users_collection.find_one({
             "phone_number": phone
         })
@@ -50,14 +54,17 @@ def check_verify():
                 "name": name,
                 "phone_number": phone
             })
+
+        else:
+            name = existing_user["name"]
+
         token = jwt.encode(
             {
                 "name": name,
                 "phone_number": phone,
 
-                # token expiry
                 "exp": datetime.datetime.utcnow()
-                + datetime.timedelta(days=7)
+                + datetime.timedelta(seconds=10)
 
             },
 
@@ -65,8 +72,17 @@ def check_verify():
 
             algorithm="HS256"
         )
-        return jsonify({"message": "Login Successful","token":token}), 200
-    return jsonify({"message": "Invalid Code"}), 401
+
+        return jsonify({
+            "message": "Login Successful",
+            "name": name,
+            "phone_number": phone,
+            "token": token
+        }), 200
+
+    return jsonify({
+        "message": "Invalid Code"
+    }), 401
 
 @check_verification_bp.route("/profile")
 def profile():

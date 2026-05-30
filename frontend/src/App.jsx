@@ -130,7 +130,6 @@ function App() {
 
     setPage(redirect);
   };
-
   return (
     <>
 
