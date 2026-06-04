@@ -1,8 +1,13 @@
+import { useAppContext } from "../src/context/AppContext";
+import { useNavigate } from "react-router-dom";
 // Helper function to determine severity color based on multi-language strings
 const isHighSeverity = (severityStr) => 
   ["High", "उच्च", "উচ্চ", "అధిక", "அதிகம்", "जास्त"].includes(severityStr);
 
-export function TreatPg({ translations, onBack, user }) {
+export function TreatPg() {
+  const { translations, user } = useAppContext();
+  const navigate = useNavigate();
+
   return (
     // min-h-screen and flex-col handle the layout shell natively
     <div className="flex flex-col min-h-screen font-sans bg-slate-50">
@@ -11,7 +16,7 @@ export function TreatPg({ translations, onBack, user }) {
       <div className="sticky top-0 z-50 flex items-center gap-4 px-6 py-4 border-b bg-emerald-950 border-white/10">
         
         <button 
-          onClick={onBack}
+          onClick={() => navigate("/")}
           className="px-4 py-2 text-sm font-medium transition-colors border rounded-lg bg-white/10 border-white/20 text-white/80 hover:bg-white/20"
         >
           {translations.back}

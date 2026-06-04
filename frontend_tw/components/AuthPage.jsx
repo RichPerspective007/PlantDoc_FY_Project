@@ -1,51 +1,68 @@
-import { GIcon } from "./GoogleIcon"; // Adjusted path assuming it's in the same folder now
+import { GIcon } from "./GoogleIcon";
 import { useState } from "react";
-import { useFarmerLocation } from "../src/hooks/useFarmerLocation"; // Importing the custom hook for location
+import { useNavigate } from "react-router-dom";
+import { useAppContext } from "../src/context/AppContext";
+import { useFarmerLocation } from "../src/hooks/useFarmerLocation";
 
-export function AuthPg({
-  translations,
-  step,
-  name,
-  setName,
-  phone,
-  setPhone,
-  otp,
-  setOtp,
-  onSuccess,
-  onBack
-}) {
-  const { error, loading, getLocation } = useFarmerLocation();
+export function AuthPg() {
+  // Global tools replacing the old props
+  const { translations, login } = useAppContext();
+  const navigate = useNavigate();
+  const { getLocation } = useFarmerLocation();
+
+  // Local state replacing the old props
+  const [step, setStep] = useState("phone");
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("");
+  const [otp, setOtp] = useState("");
+  
+  // Internal loading/error states
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+
   const handleGetOtp = async () => {
-    try {
-      const location = await getLocation();
-      console.log("Location locked:", location.latitude, location.longitude);
-    } catch (err) {
-        console.error("Location scan failed:", err.message);
-        alert("Location access is required to check local climate risks. Please allow access.");
-        // Optional: add `return;` here if you want to block OTP generation without GPS.
+    if (phone.replace(/\s/g, "").length < 10 || !name.trim()) {
+      setError("Please enter your name and a valid 10-digit phone number.");
+      return;
     }
 
+    setLoading(true);
+    setError(null);
+
     try {
+      // Force GPS Lock before allowing registration
+      await getLocation();
+
       const cleanedPhone = phone.replace(/\s/g, "");
       const res = await fetch(`${import.meta.env.VITE_API_URL}/start_verification`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone_number: `+91${cleanedPhone}` })
+        body: JSON.stringify({ phone_number: `+91${cleanedPhone}`, channel: "sms" })
       });
 
       const data = await res.json();
-      if (data.status === "pending") {
-        onSuccess("getOtp");
+      if (res.ok || data.status === "pending") {
+        setStep("otp");
       } else {
-        alert("Failed to send OTP");
+        throw new Error("Failed to send OTP");
       }
     } catch (err) {
       console.error(err);
-      alert("Server Error");
+      setError(
+        err.message === "Geolocation is not supported by your browser." || err.message.includes("allow location")
+          ? "Location access is strictly required to secure your local outbreak data."
+          : "Server error during OTP request."
+      );
+    } finally {
+      setLoading(false);
     }
   };
 
   const handleLogin = async () => {
+    if (!otp) return;
+    setLoading(true);
+    setError(null);
+
     try {
       const cleanedPhone = phone.replace(/\s/g, "");
       const res = await fetch(`${import.meta.env.VITE_API_URL}/check-verify`, {
@@ -61,18 +78,28 @@ export function AuthPg({
       const data = await res.json();
       
       if (res.status === 200) {
+        // 1. Persist to Local Storage
         localStorage.setItem("phone", `+91${cleanedPhone}`);
         localStorage.setItem("name", name);
         if (data.token) {
           localStorage.setItem("token", data.token);
+        } else {
+          localStorage.setItem("token", "verified_session_active"); // Fallback token
         }
-        onSuccess("login");
+        
+        // 2. Push to Global Context
+        login({ name, phone: `+91${cleanedPhone}` });
+
+        // 3. Navigate to Detect Page (replaces 'onSuccess("login")')
+        navigate("/detect", { replace: true });
       } else {
-        alert("Invalid OTP");
+        throw new Error("Invalid OTP. Please check and try again.");
       }
     } catch (err) {
       console.error(err);
-      alert("Server Error");
+      setError(err.message || "Server Error");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -98,17 +125,25 @@ export function AuthPg({
         <h2 className="mb-1 text-2xl font-bold tracking-tight text-slate-900">
           {translations.welcome}
         </h2>
-        <p className="mb-8 text-sm text-slate-500">
+        <p className="mb-6 text-sm text-slate-500">
           {translations.communityDesc}
         </p>
+
+        {/* Error Display */}
+        {error && (
+          <div className="p-3 mb-6 text-sm font-medium text-red-700 bg-red-50 border-l-4 border-red-500 rounded-r-lg">
+            {error}
+          </div>
+        )}
 
         {/* STEP 1: PHONE INPUT */}
         {step === "phone" && (
           <div className="flex flex-col gap-5">
             <button 
-              onClick={() => onSuccess("google")}
+              onClick={() => alert("Google Auth not yet wired up!")}
               className="flex items-center justify-center w-full gap-3 py-3 text-sm font-semibold transition-all bg-white border-2 rounded-xl text-slate-700 border-slate-200 hover:border-blue-500 hover:bg-blue-50"
-            > <div className="flex items-center justify-center w-5 h-5">
+            > 
+              <div className="flex items-center justify-center w-5 h-5">
                 <GIcon />
               </div>
               {translations.continueGoogle}
@@ -157,9 +192,12 @@ export function AuthPg({
 
             <button
               onClick={handleGetOtp}
-              className="w-full py-4 mt-2 text-sm font-bold text-white transition-all bg-emerald-950 rounded-xl hover:bg-emerald-800 hover:-translate-y-0.5 hover:shadow-lg"
+              disabled={loading}
+              className={`w-full py-4 mt-2 text-sm font-bold text-white transition-all rounded-xl ${
+                loading ? "bg-emerald-700 cursor-not-allowed" : "bg-emerald-950 hover:bg-emerald-800 hover:-translate-y-0.5 hover:shadow-lg"
+              }`}
             >
-              Get OTP →
+              {loading ? "Sending..." : "Get OTP →"}
             </button>
           </div>
         )}
@@ -182,16 +220,19 @@ export function AuthPg({
 
             <button
               onClick={handleLogin}
-              className="w-full py-4 mt-2 text-sm font-bold text-white transition-all bg-emerald-950 rounded-xl hover:bg-emerald-800 hover:-translate-y-0.5 hover:shadow-lg"
+              disabled={loading}
+              className={`w-full py-4 mt-2 text-sm font-bold text-white transition-all rounded-xl flex items-center justify-center gap-2 ${
+                loading ? "bg-emerald-700 cursor-not-allowed" : "bg-emerald-950 hover:bg-emerald-800 hover:-translate-y-0.5 hover:shadow-lg"
+              }`}
             >
-              Login →
+              {loading ? <span className="animate-spin">⏳</span> : "Login →"}
             </button>
           </div>
         )}
 
         {/* Back Button */}
         <button
-          onClick={onBack}
+          onClick={() => navigate("/")}
           className="w-full py-3 mt-4 text-sm font-semibold transition-colors border-2 bg-transparent rounded-xl text-slate-600 border-slate-200 hover:bg-slate-50"
         >
           {translations.back}

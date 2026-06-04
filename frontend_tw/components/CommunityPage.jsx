@@ -1,14 +1,17 @@
 import { LANGUAGES } from "../data/LangTrans";
 import { useState, useRef, useEffect, useMemo } from "react";
+import { useAppContext } from "../src/context/AppContext";
+import { useNavigate } from "react-router-dom";
 
-export function CommPg({ translations, lang, onBack, onLanguageChange, user }) {
+export function CommPg() {
+  const { translations, lang, setLang, user } = useAppContext();
   const [tab, setTab] = useState("chat");
   const [msgs, setMsgs] = useState(translations.communityMessages);
   const [inp, setInp] = useState(""); 
   const endRef = useRef();
-  
   const currentLanguage = useMemo(() => LANGUAGES.find(l => l.code === lang), [lang]);
-  
+  const navigate = useNavigate();
+
   useEffect(() => { 
     endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [msgs]);
@@ -40,7 +43,7 @@ export function CommPg({ translations, lang, onBack, onLanguageChange, user }) {
       
       {/* ── TOP NAV SHELL ── */}
       <div className="flex items-center gap-4 px-6 py-4 border-b bg-emerald-950 border-white/10 shrink-0">
-        <button onClick={onBack} className="px-4 py-2 text-sm font-medium transition-colors border rounded-lg bg-white/10 border-white/20 text-white/80 hover:bg-white/20">
+        <button onClick={() => navigate("/")} className="px-4 py-2 text-sm font-medium transition-colors border rounded-lg bg-white/10 border-white/20 text-white/80 hover:bg-white/20">
           {translations.back}
         </button>
         <span className="flex-1 text-lg font-bold text-slate-50">👥 {translations.communityTitle}</span>
@@ -51,7 +54,10 @@ export function CommPg({ translations, lang, onBack, onLanguageChange, user }) {
           </div>
         )}
         <button
-          onClick={onLanguageChange}
+          onClick={() => {
+            const i = LANGUAGES.findIndex(l => l.code === lang);
+            setLang(LANGUAGES[(i + 1) % LANGUAGES.length].code);
+          }}
           className="px-4 py-2 text-xs font-bold transition-colors border rounded-full bg-emerald-900/50 text-emerald-100 border-emerald-700 hover:bg-emerald-800"
         >
           {currentLanguage?.flag} {currentLanguage?.native}

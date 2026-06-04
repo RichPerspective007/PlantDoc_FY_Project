@@ -1,11 +1,15 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { LANGUAGES } from "../data/LangTrans";
 import { useFarmerLocation } from "../src/hooks/useFarmerLocation"; // Importing the custom hook for location
+import { useAppContext } from "../src/context/AppContext";
+import { useNavigate } from "react-router-dom";
 
 
-export function DetectPg({ translations, lang, onBack, onLanguageChange, user }) {
+export function DetectPg() {
   // ── STATES ──
   const { coords, error, loading, getLocation } = useFarmerLocation();
+  const { translations, lang, setLang, user } = useAppContext();
+  const navigate = useNavigate();
   const [img, setImg] = useState(null);
   const [file, setFile] = useState(null);
   const [drag, setDrag] = useState(false);
@@ -275,7 +279,7 @@ export function DetectPg({ translations, lang, onBack, onLanguageChange, user })
       
       {/* ── TOP NAV SHELL ── */}
       <div className="flex items-center gap-4 px-6 py-4 bg-emerald-950">
-        <button onClick={onBack} className="px-4 py-2 text-sm font-medium transition-colors border rounded-lg bg-white/10 border-white/20 text-white/80 hover:bg-white/20">
+        <button onClick={() => navigate("/")} className="px-4 py-2 text-sm font-medium transition-colors border rounded-lg bg-white/10 border-white/20 text-white/80 hover:bg-white/20">
           {translations.back}
         </button>
         <span className="flex-1 text-lg font-bold text-slate-50">🔬 {translations.detectTitle}</span>
@@ -288,7 +292,7 @@ export function DetectPg({ translations, lang, onBack, onLanguageChange, user })
         <button
           onClick={() => {
             const i = LANGUAGES.findIndex(l => l.code === lang);
-            onLanguageChange(LANGUAGES[(i + 1) % LANGUAGES.length].code);
+            setLang(LANGUAGES[(i + 1) % LANGUAGES.length].code);
           }}
           className="px-4 py-2 text-xs font-bold transition-colors border rounded-full bg-emerald-900/50 text-emerald-100 border-emerald-700 hover:bg-emerald-800"
         >

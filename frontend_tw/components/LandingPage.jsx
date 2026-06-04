@@ -1,7 +1,14 @@
+import { useNavigate } from "react-router-dom";
+import { useAppContext } from "../src/context/AppContext";
 import { LANGUAGES } from "../data/LangTrans";
 import { Navbar } from "./Navbar";
 
-export function Landing({ translations, lang, go, openLang, user }) {
+export function Landing() {
+  // Pulling state globally instead of relying on props
+  const { translations, lang } = useAppContext();
+  
+  // React Router's native navigation hook
+  const navigate = useNavigate();
   // Renamed 'c' to 'currentLanguage' for readability
   const currentLanguage = LANGUAGES.find(l => l.code === lang);
 
@@ -17,7 +24,7 @@ export function Landing({ translations, lang, go, openLang, user }) {
       <Navbar 
         appName={translations.appName} 
         currentLanguage={currentLanguage} 
-        openLang={openLang} 
+        openLang={() => navigate("/language")} 
       />
 
       {/* Hero Section */}
@@ -43,21 +50,21 @@ export function Landing({ translations, lang, go, openLang, user }) {
         <div className="flex flex-wrap justify-center gap-4 mt-2">
           
           <button 
-            onClick={() => go("detect")}
+            onClick={() => navigate("/detect")}
             className="px-7 py-3.5 text-sm font-bold tracking-wide transition-all translate-y-0 rounded-full shadow-lg text-slate-50 bg-emerald-600 hover:bg-emerald-500 hover:-translate-y-1 hover:shadow-emerald-900/50"
           >
             🔬 {translations.detectBtn}
           </button>
           
           <button 
-            onClick={() => go("community")}
+            onClick={() => navigate("/community")}
             className="px-6 py-3.5 text-sm font-medium transition-colors border rounded-full text-slate-200 bg-transparent border-white/20 hover:bg-white/10 hover:border-white/40"
           >
             👥 {translations.communityBtn}
           </button>
           
           <button 
-            onClick={() => go("treatment")}
+            onClick={() => navigate("/treatment")}
             className="px-6 py-3.5 text-sm font-medium transition-colors border rounded-full text-slate-200 bg-transparent border-white/20 hover:bg-white/10 hover:border-white/40"
           >
             📋 {translations.treatmentBtn}
