@@ -1,6 +1,9 @@
 import { LANGUAGES } from "../data/LangTrans";
+import { useNavigate } from "react-router-dom";
 
-export function LangPg({ translations, tempLang, setTempLang, onConfirm, onBack }) {
+export function LangPg({ translations, tempLang, setTempLang, onConfirm }) {
+  const navigate = useNavigate();
+
   return (
     // min-h-screen ensures full height, bg-slate-50 replaces '--cream'
     <div className="min-h-screen font-sans bg-slate-50 text-slate-900">
@@ -16,7 +19,7 @@ export function LangPg({ translations, tempLang, setTempLang, onConfirm, onBack 
           </span>
         </div>
         <button 
-          onClick={onBack}
+          onClick={() => navigate(-1)}
           className="text-sm font-medium transition-colors text-slate-300 hover:text-white"
         >
           {translations.back}
