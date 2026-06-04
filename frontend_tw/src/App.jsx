@@ -1,9 +1,6 @@
 import { useState } from "react";
 
 import "./App.css";
-import "../styles/Profile.css";
-import "../styles/Shell.css";
-import "../styles/Community.css";
 
 import { Landing } from "../components/LandingPage";
 import { LangPg } from "../components/LanguagePage";
