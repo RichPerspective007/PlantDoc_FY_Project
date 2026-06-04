@@ -20,9 +20,19 @@ start_verification_bp = Blueprint("start_verification_bp", __name__)
 @start_verification_bp.route("/start_verification", methods=["POST"])
 def start_verify():
     phone = request.json.get('phone_number') # e.g., +91XXXXXXXXXX
+    existing_user = users_collection.find_one({
+        "phone_number": phone
+    })
+    response_dict = dict()
+    if existing_user:
+        response_dict["existing_user"] = True
+        response_dict["name"] = existing_user["name"]
+    else:
+        response_dict["existing_user"] = False
+
     verification = client.verify.v2.services(os.getenv("TWILIO_VERIFY_SID")).verifications.create(to=phone, channel='sms')
 
-    return jsonify({"status": verification.status}) # returns 'pending'
+    return jsonify({"status": verification.status, **response_dict}) # returns 'pending'
 
 check_verification_bp = Blueprint("check_verification_bp", __name__)
 

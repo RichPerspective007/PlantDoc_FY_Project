@@ -15,14 +15,15 @@ export function AuthPg() {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [otp, setOtp] = useState("");
+  const [existingUser, setExistingUser] = useState(false); // To track if user already exists after OTP request
   
   // Internal loading/error states
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
   const handleGetOtp = async () => {
-    if (phone.replace(/\s/g, "").length < 10 || !name.trim()) {
-      setError("Please enter your name and a valid 10-digit phone number.");
+    if (phone.replace(/\s/g, "").length < 10) {
+      setError("Please enter a valid 10-digit phone number.");
       return;
     }
 
@@ -42,6 +43,10 @@ export function AuthPg() {
 
       const data = await res.json();
       if (res.ok || data.status === "pending") {
+        if (data.existing_user) {
+          setName(data.name); // Pre-fill name if user already exists
+          setExistingUser(true);
+        }
         setStep("otp");
       } else {
         throw new Error("Failed to send OTP");
@@ -79,7 +84,7 @@ export function AuthPg() {
       
       if (res.status === 200) {
         // 1. Persist to Local Storage
-        localStorage.setItem("phone", `+91${cleanedPhone}`);
+        localStorage.setItem("phone_number", `+91${cleanedPhone}`);
         localStorage.setItem("name", name);
         if (data.token) {
           localStorage.setItem("token", data.token);
@@ -88,7 +93,7 @@ export function AuthPg() {
         }
         
         // 2. Push to Global Context
-        login({ name, phone: `+91${cleanedPhone}` });
+        login({ name, phone_number: `+91${cleanedPhone}` });
 
         // 3. Navigate to Detect Page (replaces 'onSuccess("login")')
         navigate("/detect", { replace: true });
@@ -156,17 +161,6 @@ export function AuthPg() {
             </div>
 
             <div className="space-y-1">
-              <label className="text-xs font-bold tracking-wide text-slate-600">NAME</label>
-              <input
-                type="text"
-                placeholder="Enter your name"
-                value={name}
-                onChange={(e) => setName(e.target.value)}
-                className="w-full px-4 py-3 text-sm transition-all bg-slate-50 border-2 border-slate-200 rounded-xl outline-none focus:border-emerald-600 focus:bg-white focus:ring-4 focus:ring-emerald-600/10"
-              />
-            </div>
-
-            <div className="space-y-1">
               <label className="text-xs font-bold tracking-wide text-slate-600 uppercase">{translations.phone}</label>
               <div className="flex items-center overflow-hidden bg-slate-50 border-2 border-slate-200 rounded-xl focus-within:border-emerald-600 focus-within:bg-white focus-within:ring-4 focus-within:ring-emerald-600/10 transition-all">
                 <span className="px-4 text-sm font-bold border-r-2 text-slate-600 border-slate-200 bg-slate-100 py-3">
@@ -204,7 +198,20 @@ export function AuthPg() {
 
         {/* STEP 2: OTP INPUT */}
         {step === "otp" && (
+          
           <div className="flex flex-col gap-5">
+            <div className="space-y-1">
+              <label className="text-xs font-bold tracking-wide text-slate-600">NAME</label>
+              <input
+                type="text"
+                placeholder={existingUser ? name : "Enter your name"}
+                disabled={existingUser} // Disable if user already exists
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="w-full px-4 py-3 text-sm transition-all bg-slate-50 border-2 border-slate-200 rounded-xl outline-none focus:border-emerald-600 focus:bg-white focus:ring-4 focus:ring-emerald-600/10"
+              />
+            </div>
+
             <div className="space-y-1">
               <label className="text-xs font-bold tracking-wide text-slate-600">ENTER OTP</label>
               <input

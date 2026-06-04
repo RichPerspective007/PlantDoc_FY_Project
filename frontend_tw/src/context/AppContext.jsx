@@ -15,10 +15,10 @@ export function AppProvider({ children }) {
   useEffect(() => {
     const token = localStorage.getItem("token");
     const savedName = localStorage.getItem("name");
-    const savedPhone = localStorage.getItem("phone");
+    const savedPhone = localStorage.getItem("phone_number");
 
     if (token && savedName && savedPhone) {
-      setUser({ name: savedName, phone: savedPhone });
+      setUser({ name: savedName, phone_number: savedPhone });
     }
     setLoading(false);
   }, []);
@@ -30,7 +30,7 @@ export function AppProvider({ children }) {
   const logout = () => {
     localStorage.removeItem("token");
     localStorage.removeItem("name");
-    localStorage.removeItem("phone");
+    localStorage.removeItem("phone_number");
     setUser(null);
   };
 
