@@ -35,7 +35,7 @@ export function AgriBotChat({ diseaseResult }) {
   useEffect(() => {
     if (!user?.name) return;
     setLoadingHist(true);
-    fetch(`${import.meta.env.VITE_API_URL}/showconvolist?phone_number=${user.phone_number}`)
+    fetch(`${import.meta.env.VITE_API_URL}/showconvolist?phone_number=${user.phone}`)
       .then(r => r.json())
       .then(ids => setSessions(ids))
       .catch(console.error)
@@ -46,7 +46,7 @@ export function AgriBotChat({ diseaseResult }) {
   const loadSession = async (sid) => {
     setActive(sid);
     try {
-      const r = await fetch(`${import.meta.env.VITE_API_URL}/internalconvo?phone_number=${user.phone_number}&session_id=${sid}`);
+      const r = await fetch(`${import.meta.env.VITE_API_URL}/internalconvo?phone_number=${user.phone}&session_id=${sid}`);
       const data = await r.json();
       setMsgs(data.map(m => ({ r: m.role === "human" ? "u" : "b", txt: m.text })));
       sessionId.current = sid;
