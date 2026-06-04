@@ -1,11 +1,11 @@
 import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { LANGUAGES } from "../data/LangTrans";
+import { useFarmerLocation } from "../src/hooks/useFarmerLocation"; // Importing the custom hook for location
+
 
 export function DetectPg({ translations, lang, onBack, onLanguageChange, user }) {
   // ── STATES ──
-  const [coords, setCoords] = useState({ latitude: null, longitude: null });
-  const [error, setError] = useState(null);
-  const [loading, setLoading] = useState(false);
+  const { coords, error, loading, getLocation } = useFarmerLocation();
   const [img, setImg] = useState(null);
   const [file, setFile] = useState(null);
   const [drag, setDrag] = useState(false);
@@ -49,7 +49,7 @@ export function DetectPg({ translations, lang, onBack, onLanguageChange, user })
   useEffect(() => {
     if (!user?.name) return;
     setLoadingHist(true);
-    fetch(`http://localhost:5000/showconvolist?user_name=${user.name}`)
+    fetch(`${import.meta.env.VITE_API_URL}/showconvolist?user_name=${user.name}`)
       .then(r => r.json())
       .then(ids => setSessions(ids))
       .catch(console.error)
@@ -57,36 +57,14 @@ export function DetectPg({ translations, lang, onBack, onLanguageChange, user })
   }, [user]);
 
   useEffect(() => {
-    const getFarmerLocation = async () => {
-      if (!navigator.geolocation) {
-        setError("Geolocation is not supported by your browser.");
-        return;
-      }
-      setLoading(true);
-      setError(null);
-      navigator.geolocation.getCurrentPosition(
-        (position) => {
-          setCoords({ latitude: position.coords.latitude, longitude: position.coords.longitude });
-          setLoading(false);
-        },
-        (err) => {
-          setLoading(false);
-          const errorMessages = {
-            [err.PERMISSION_DENIED]: "Please allow location access to check local climate risks.",
-            [err.POSITION_UNAVAILABLE]: "Location information is unavailable.",
-            [err.TIMEOUT]: "The request to get user location timed out."
-          };
-          setError(errorMessages[err.code] || "An unknown error occurred.");
-        },
-        { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
-      );
-    };
-    getFarmerLocation();
-  }, [user]);
+    getLocation().catch(
+      err => console.log("Initial location fetch failed:", err.message)
+    );
+  }, [getLocation, user]);
 
   useEffect(() => {
     if (coords.latitude && coords.longitude) {
-      fetch(`http://localhost:5000/local-pulse?lat=${coords.latitude}&lon=${coords.longitude}`)
+      fetch(`${import.meta.env.VITE_API_URL}/local-pulse?lat=${coords.latitude}&lon=${coords.longitude}`)
         .then(r => r.json())
         .then(data => setLocOutbreak({
           total_local_scans: data.total_local_scans,
@@ -99,6 +77,7 @@ export function DetectPg({ translations, lang, onBack, onLanguageChange, user })
     }
   }, [coords.latitude, coords.longitude]);
 
+  // Cleanup camera stream on unmount
   useEffect(() => {
     return () => stopStream();
   }, []);
@@ -120,7 +99,7 @@ export function DetectPg({ translations, lang, onBack, onLanguageChange, user })
   const loadSession = async (sid) => {
     setActive(sid);
     try {
-      const r = await fetch(`http://localhost:5000/internalconvo?user_name=${user.name}&session_id=${sid}`);
+      const r = await fetch(`${import.meta.env.VITE_API_URL}/internalconvo?user_name=${user.name}&session_id=${sid}`);
       const data = await r.json();
       setMsgs(data.map(m => ({ r: m.role === "human" ? "u" : "b", txt: m.text })));
       sessionId.current = sid;
@@ -141,13 +120,20 @@ export function DetectPg({ translations, lang, onBack, onLanguageChange, user })
   const analyze = async () => {
     if (!file) return;
     setBusy(true);
+    
     try {
+      // Smart location check: use existing coords, or aggressively fetch them now
+      let finalCoords = coords;
+      if (!finalCoords.latitude) {
+        finalCoords = await getLocation();
+      }
+
       const formData = new FormData();
       formData.append("file", file);
-      formData.append("latitude", coords.latitude);
-      formData.append("longitude", coords.longitude);
+      formData.append("latitude", finalCoords.latitude);
+      formData.append("longitude", finalCoords.longitude);
       
-      const response = await fetch("http://localhost:5000/predict", {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/predict`, {
         method: "POST",
         body: formData
       });
@@ -163,7 +149,9 @@ export function DetectPg({ translations, lang, onBack, onLanguageChange, user })
       setMsgs(p => [...p, { r: "b", txt: `🔬 ${data.prediction} (${(data.confidence * 100).toFixed(2)}%)` }]);
     } catch (err) {
       console.error(err);
-      alert("Server error");
+      alert(err.message === "Geolocation is not supported by your browser." || err.message.includes("allow location")
+        ? err.message 
+        : "Server error during analysis");
     } finally {
       setBusy(false);
     }
@@ -176,7 +164,7 @@ export function DetectPg({ translations, lang, onBack, onLanguageChange, user })
     setMsgs(prev => [...prev, { r: "u", txt: m }]);
     setTyping(true);
     try {
-      const response = await fetch("http://localhost:5000/chat", {
+      const response = await fetch(`${import.meta.env.VITE_API_URL}/chat`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

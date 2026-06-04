@@ -1,5 +1,6 @@
 import { GIcon } from "./GoogleIcon"; // Adjusted path assuming it's in the same folder now
 import { useState } from "react";
+import { useFarmerLocation } from "../src/hooks/useFarmerLocation"; // Importing the custom hook for location
 
 export function AuthPg({
   translations,
@@ -13,52 +14,20 @@ export function AuthPg({
   onSuccess,
   onBack
 }) {
-  const [coords, setCoords] = useState({ latitude: null, longitude: null });
-  const [error, setError] = useState(null);
-  const [loading, setLoading] = useState(false);
-
-  const getFarmerLocation = () => {
-    if (!navigator.geolocation) {
-      setError("Geolocation is not supported by your browser.");
-      return;
-    }
-
-    setLoading(true);
-    setError(null);
-
-    navigator.geolocation.getCurrentPosition(
-      (position) => {
-        setCoords({
-          latitude: position.coords.latitude,
-          longitude: position.coords.longitude,
-        });
-        setLoading(false);
-      },
-      (err) => {
-        setLoading(false);
-        const errorMessages = {
-          [err.PERMISSION_DENIED]: "Please allow location access to check local climate risks.",
-          [err.POSITION_UNAVAILABLE]: "Location information is unavailable.",
-          [err.TIMEOUT]: "The request to get user location timed out."
-        };
-        setError(errorMessages[err.code] || "An unknown error occurred.");
-      },
-      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
-    );
-  };
-
+  const { error, loading, getLocation } = useFarmerLocation();
   const handleGetOtp = async () => {
     try {
-      getFarmerLocation();
-      console.log("Location scan initiated");
+      const location = await getLocation();
+      console.log("Location locked:", location.latitude, location.longitude);
     } catch (err) {
-      console.error("Location scan failed:", err);
-      alert("Location access is required to check local climate risks. Please allow location access and try again.");
+        console.error("Location scan failed:", err.message);
+        alert("Location access is required to check local climate risks. Please allow access.");
+        // Optional: add `return;` here if you want to block OTP generation without GPS.
     }
 
     try {
       const cleanedPhone = phone.replace(/\s/g, "");
-      const res = await fetch("http://127.0.0.1:5000/start_verification", {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/start_verification`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ phone_number: `+91${cleanedPhone}` })
@@ -79,7 +48,7 @@ export function AuthPg({
   const handleLogin = async () => {
     try {
       const cleanedPhone = phone.replace(/\s/g, "");
-      const res = await fetch("http://127.0.0.1:5000/check-verify", {
+      const res = await fetch(`${import.meta.env.VITE_API_URL}/check-verify`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({

@@ -39,8 +39,8 @@ def predict():
         coords = True
         if (request.form.get("latitude") is None) or (request.form.get("longitude") is None):
             coords = False
-        lat = request.form.get("latitude")
-        lon = request.form.get("longitude")
+        lat = float(request.form.get("latitude"))
+        lon = float(request.form.get("longitude"))
         img_lnl_array, img_array = preprocess_image(file)  # Use smaller size for leaf vs non-leaf model
         lnl_pred = leaf_nonleaf_model.predict(img_lnl_array)
         if lnl_pred[0][0] > 0.5:

@@ -1,10 +1,15 @@
 from flask import Blueprint, request, jsonify
+from utils.load_mongo_client import get_db
+db = get_db()
+scans = db["scans"]
 
 localized_threats_bp = Blueprint("localized_threats_bp", __name__)
 
 @localized_threats_bp.route("/local-pulse", methods=["GET"])
-def get_local_pulse(lat: float, lon: float):
+def get_local_pulse():
     # PyMongo Geospatial Aggregation Pipeline
+    lat = float(request.args.get("lat"))
+    lon = float(request.args.get("lon"))
     pipeline = [
         {
             "$geoNear": {
@@ -24,7 +29,7 @@ def get_local_pulse(lat: float, lon: float):
     ]
     
     # Executing the blocking query safely
-    results = list(db.scans.aggregate(pipeline))
+    results = list(scans.aggregate(pipeline))
     
     if not results:
         return jsonify({"total_scans": 0, "top_threat": "None", "threat_count": 0})
