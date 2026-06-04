@@ -35,10 +35,10 @@
 
 # chain = chat_template | model
 
-# def history_finder(phone_no, session):
+# def history_finder(phone_number, session):
 #     history = []
 #     doc = col.find_one(
-#         {"phone_no": phone_no, "session_id": session},
+#         {"phone_number": phone_number, "session_id": session},
 #         {"messages": 1}
 #     )
 
@@ -53,14 +53,14 @@
 #     else:
 #         return []
 
-# def save_messages(phone_no, session, content, role):
+# def save_messages(phone_number, session, content, role):
 #     message = {
 #         "role": role,
 #         "text": content
 #     }
 
 #     col.update_one(
-#         {"phone_no": phone_no, "session_id": session},
+#         {"phone_number": phone_number, "session_id": session},
 #         {
 #             "$set": {"session_id": session},
 #             "$push": {"messages": {"$each": [message]}}
@@ -73,15 +73,15 @@
 # def chat():
 #     data = request.get_json()
 
-#     phone_no = data.get("phone_no")
+#     phone_number = data.get("phone_number")
 #     session = data.get("session_id")
 #     user_input = data.get("message")
 #     selected_language = data.get("language")
 
-#     if not all([phone_no, session, user_input]):
+#     if not all([phone_number, session, user_input]):
 #         return jsonify({"errorMessage": "Missing fields"}), 400
 
-#     history = history_finder(phone_no, session)
+#     history = history_finder(phone_number, session)
 
 #     response_from_ai = chain.invoke(
 #         {
@@ -93,22 +93,22 @@
 
 #     ai_reply_actual = response_from_ai.content[0]["text"]
 
-#     save_messages(phone_no, session, user_input, "human")
-#     save_messages(phone_no, session, ai_reply_actual, "ai")
+#     save_messages(phone_number, session, user_input, "human")
+#     save_messages(phone_number, session, ai_reply_actual, "ai")
 
 #     return jsonify({
 #         "reply": ai_reply_actual,
 #         "session_id": session,
-#         "phone_no": phone_no
+#         "phone_number": phone_number
 #     }), 201
 
 
 # @chat_bp.route("/showconvolist", methods=["GET"])
 # def get_list_of_convo():
-#     phone_no = request.args.get("phone_no")
+#     phone_number = request.args.get("phone_number")
 
 #     sessions_got = col.find(
-#         {"phone_no": phone_no},
+#         {"phone_number": phone_number},
 #         {"session_id": 1}
 #     )
 
@@ -117,11 +117,11 @@
 
 # @chat_bp.route("/internalconvo", methods=["GET"])
 # def internal_convo_get():
-#     phone_no = request.args.get("phone_no")
+#     phone_number = request.args.get("phone_number")
 #     session = request.args.get("session_id")
 
 #     internal_con = col.find_one(
-#         {"phone_no": phone_no, "session_id": session},
+#         {"phone_number": phone_number, "session_id": session},
 #         {"messages": 1}
 #     )
 
@@ -169,10 +169,10 @@ chat_template = ChatPromptTemplate(
 
 chain = chat_template | model
 
-def history_finder(phone_no, session):
+def history_finder(phone_number, session):
     history = []
     doc = col.find_one(
-        {"phone_no": phone_no, "session_id": session},
+        {"phone_number": phone_number, "session_id": session},
         {"messages": 1}
     )
 
@@ -187,14 +187,14 @@ def history_finder(phone_no, session):
     else:
         return []
 
-def save_messages(phone_no, session, content, role):
+def save_messages(phone_number, session, content, role):
     message = {
         "role": role,
         "text": content
     }
 
     col.update_one(
-        {"phone_no": phone_no, "session_id": session},
+        {"phone_number": phone_number, "session_id": session},
         {
             "$set": {"session_id": session},
             "$push": {"messages": {"$each": [message]}}
@@ -207,15 +207,15 @@ def save_messages(phone_no, session, content, role):
 def chat():
     data = request.get_json()
 
-    phone_no = data.get("phone_no")
+    phone_number = data.get("phone_number")
     session = data.get("session_id")
     user_input = data.get("message")
     selected_language = data.get("language")
 
-    if not all([phone_no, session, user_input]):
+    if not all([phone_number, session, user_input]):
         return jsonify({"errorMessage": "Missing fields"}), 400
 
-    history = history_finder(phone_no, session)
+    history = history_finder(phone_number, session)
 
     response_from_ai = chain.invoke(
         {
@@ -227,22 +227,22 @@ def chat():
 
     ai_reply_actual = response_from_ai.content[0]["text"]
 
-    save_messages(phone_no, session, user_input, "human")
-    save_messages(phone_no, session, ai_reply_actual, "ai")
+    save_messages(phone_number, session, user_input, "human")
+    save_messages(phone_number, session, ai_reply_actual, "ai")
 
     return jsonify({
         "reply": ai_reply_actual,
         "session_id": session,
-        "phone_no": phone_no
+        "phone_number": phone_number
     }), 201
 
 
 @chat_bp.route("/showconvolist", methods=["GET"])
 def get_list_of_convo():
-    phone_no = request.args.get("phone_no")
+    phone_number = request.args.get("phone_number")
 
     sessions_got = col.find(
-        {"phone_no": phone_no},
+        {"phone_number": phone_number},
         {"session_id": 1}
     )
 
@@ -251,11 +251,11 @@ def get_list_of_convo():
 
 @chat_bp.route("/internalconvo", methods=["GET"])
 def internal_convo_get():
-    phone_no = request.args.get("phone_no")
+    phone_number = request.args.get("phone_number")
     session = request.args.get("session_id")
 
     internal_con = col.find_one(
-        {"phone_no": phone_no, "session_id": session},
+        {"phone_number": phone_number, "session_id": session},
         {"messages": 1}
     )
 
