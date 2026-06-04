@@ -11,6 +11,7 @@ import os
 from routes.chat import *
 from routes.prediction import *
 from routes.verification import start_verification_bp, check_verification_bp
+from routes.localized_threats import localized_threats_bp
 from utils.cacheinstance import cache
 
 app = Flask(__name__)
@@ -26,6 +27,7 @@ app.register_blueprint(chat_bp)
 app.register_blueprint(prediction_bp)
 app.register_blueprint(start_verification_bp)
 app.register_blueprint(check_verification_bp)
+app.register_blueprint(localized_threats_bp)
 CORS(app) 
 
 # ---------------- HOME ----------------

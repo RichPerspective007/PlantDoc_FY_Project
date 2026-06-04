@@ -4,13 +4,11 @@ import jwt
 import datetime
 from dotenv import load_dotenv
 from twilio.rest import Client
-from pymongo import MongoClient
+from utils.load_mongo_client import get_db
 
 load_dotenv()
 
-#print(os.getenv("MONGO_URI"))
-mongo_client = MongoClient(os.getenv("MONGO_URI"))
-db = mongo_client["plantdoc"]
+db = get_db()
 users_collection = db["users"]
 
 #secret = os.getenv("JWT_SECRET")

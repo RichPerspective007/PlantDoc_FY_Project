@@ -1,15 +1,19 @@
 from flask import Blueprint, request, jsonify
 from PIL import Image
+from datetime import datetime, UTC
 import os
 from tensorflow.keras.models import load_model
 import json
 from utils.img_preprocess import preprocess_image
 from utils.model_genai_external import get_model_genai
 from utils.load_leafnonleaf import get_leaf_nonleaf_model, get_prediction_model
+from utils.load_mongo_client import get_db
 import numpy as np
 model_genai = get_model_genai()
 
 prediction_bp = Blueprint("prediction_bp", __name__)
+db = get_db()
+scans = db["scans"]
 
 #LEAF_VS_NONLEAF_MODEL_PATH = os.path.join(os.path.dirname(prediction_bp.root_path), "model", "best_leaf_model.keras")
 #leaf_nonleaf_model = load_model(LEAF_VS_NONLEAF_MODEL_PATH)
@@ -32,6 +36,11 @@ def predict():
             return jsonify({"error": "No file uploaded"}), 400
 
         file = request.files["file"]
+        coords = True
+        if (request.form.get("latitude") is None) or (request.form.get("longitude") is None):
+            coords = False
+        lat = request.form.get("latitude")
+        lon = request.form.get("longitude")
         img_lnl_array, img_array = preprocess_image(file)  # Use smaller size for leaf vs non-leaf model
         lnl_pred = leaf_nonleaf_model.predict(img_lnl_array)
         if lnl_pred[0][0] > 0.5:
@@ -47,7 +56,18 @@ def predict():
         index = np.argmax(pred)
         label = class_names[index]
         confidence = float(pred[0][index])
-
+        try:
+            scan_document = {
+                "disease_name": label,
+                "location": {
+                    "type": "Point",
+                    "coordinates": [lon, lat]  # Longitude first!
+                },
+                "timestamp": datetime.now(UTC)
+            }
+            scans.insert_one(scan_document)
+        except Exception as e:
+            print(f"Error saving scan to database: {e}")
         prompt = f"""
         Give response in JSON format:
 

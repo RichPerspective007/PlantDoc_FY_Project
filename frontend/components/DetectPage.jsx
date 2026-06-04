@@ -2,6 +2,54 @@ import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { LANGUAGES } from "../data/LangTrans";
 
 export function DetectPg({ t, lang, back, onLang, user }) {
+  const [coords, setCoords] = useState({ latitude: null, longitude: null });
+  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  const getFarmerLocation = async () => {
+    if (!navigator.geolocation) {
+      setError("Geolocation is not supported by your browser.");
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setCoords({
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+        });
+        setLoading(false);
+        
+        // Trigger your FastAPI weather/outbreak endpoints right here:
+        // fetchWeatherData(position.coords.latitude, position.coords.longitude);
+      },
+      (err) => {
+        setLoading(false);
+        switch (err.code) {
+          case err.PERMISSION_DENIED:
+            setError("Please allow location access to check local climate risks.");
+            break;
+          case err.POSITION_UNAVAILABLE:
+            setError("Location information is unavailable.");
+            break;
+          case err.TIMEOUT:
+            setError("The request to get user location timed out.");
+            break;
+          default:
+            setError("An unknown error occurred.");
+            break;
+        }
+      },
+      {
+        enableHighAccuracy: true, // Forces GPS usage on mobile devices instead of rough IP mapping
+        timeout: 10000,           // Give up after 10 seconds
+        maximumAge: 60000         // Accept a cached location if it's less than 1 minute old
+      }
+    );
+  };
 
   const [img, setImg] = useState(null);
   const [file, setFile] = useState(null);
@@ -14,6 +62,7 @@ export function DetectPg({ t, lang, back, onLang, user }) {
   const [activeSession, setActive] = useState(null);
   const [loadingHist, setLoadingHist] = useState(false);
   const [typing, setTyping] = useState(false);
+  const [locOutbreak, setLocOutbreak] = useState(null);
 
   // voice states
   const [listening, setListening] = useState(false);
@@ -57,6 +106,25 @@ export function DetectPg({ t, lang, back, onLang, user }) {
       .finally(() => setLoadingHist(false));
   }, [user]);
 
+  useEffect(() => {
+    getFarmerLocation();
+  }, [user]);
+  useEffect(() => {
+  if (coords.latitude && coords.longitude) {
+    fetch(`http://localhost:5000/local-pulse?lat=${coords.latitude}&lon=${coords.longitude}`)
+      .then(r => r.json())
+      .then(data => setLocOutbreak({
+        total_local_scans: data.total_local_scans,
+        top_threat: data.top_threat,
+        threat_count: data.threat_count
+      }))
+      .catch(console.error);
+  } else {
+    // This will print initially, which is completely normal. 
+    // It will disappear once the GPS locks on and Phase 2 runs again.
+    console.log("Waiting for GPS lock to fetch local outbreak info...");
+  }
+}, [coords.latitude, coords.longitude]);
   // cleanup camera stream on unmount
   useEffect(() => {
     return () => stopStream();
@@ -107,9 +175,22 @@ export function DetectPg({ t, lang, back, onLang, user }) {
   const analyze = async () => {
     if (!file) return;
     setBusy(true);
+    /*try {
+      await getFarmerLocation();
+      console.log("Location scan initiated");
+      console.log(coords.latitude, coords.longitude);
+    }
+    catch (err) {
+      console.error(err);
+      alert("Server error");
+    } finally {
+      setBusy(false);
+    }*/
     try {
       const formData = new FormData();
       formData.append("file", file);
+      formData.append("latitude", coords.latitude);
+      formData.append("longitude", coords.longitude);
       const response = await fetch("http://localhost:5000/predict", {
         method: "POST",
         body: formData
@@ -388,6 +469,12 @@ export function DetectPg({ t, lang, back, onLang, user }) {
               </ul>
             </div>
           )}
+          {locOutbreak && (
+            <div className="res-box">
+              <p className="res-desc">In your area, there have been {locOutbreak.threat_count} scans of {locOutbreak.top_threat} recently. Stay vigilant and consider preventive measures.</p>
+            </div>
+          )}
+          
         </div>
 
         {/* ── agribot chat ── */}

@@ -1,4 +1,5 @@
 import { GIcon } from "../components/GoogleIcon";
+import { useState } from "react";
 
 export function AuthPg({
   t,
@@ -12,11 +13,70 @@ export function AuthPg({
   ok,
   back
 }) {
+    const [coords, setCoords] = useState({ latitude: null, longitude: null });
+    const [error, setError] = useState(null);
+    const [loading, setLoading] = useState(false);
+  
+    const getFarmerLocation = () => {
+      if (!navigator.geolocation) {
+        setError("Geolocation is not supported by your browser.");
+        return;
+      }
+  
+      setLoading(true);
+      setError(null);
+  
+      navigator.geolocation.getCurrentPosition(
+        (position) => {
+          setCoords({
+            latitude: position.coords.latitude,
+            longitude: position.coords.longitude,
+          });
+          setLoading(false);
+          
+          // Trigger your FastAPI weather/outbreak endpoints right here:
+          // fetchWeatherData(position.coords.latitude, position.coords.longitude);
+        },
+        (err) => {
+          setLoading(false);
+          switch (err.code) {
+            case err.PERMISSION_DENIED:
+              setError("Please allow location access to check local climate risks.");
+              break;
+            case err.POSITION_UNAVAILABLE:
+              setError("Location information is unavailable.");
+              break;
+            case err.TIMEOUT:
+              setError("The request to get user location timed out.");
+              break;
+            default:
+              setError("An unknown error occurred.");
+              break;
+          }
+        },
+        {
+          enableHighAccuracy: true, // Forces GPS usage on mobile devices instead of rough IP mapping
+          timeout: 10000,           // Give up after 10 seconds
+          maximumAge: 60000         // Accept a cached location if it's less than 1 minute old
+        }
+      );
+    };
 
   // ================= GET OTP =================
 
   const handleGetOtp = async () => {
-
+    try {
+      getFarmerLocation();
+      console.log("Location scan initiated");
+      console.log(coords.latitude, coords.longitude);
+    }
+    catch (err) {
+      console.error(err);
+      console.log("Location scan failed:", err);
+      alert("Location access is required to check local climate risks. Please allow location access and try again.");
+    } finally {
+      console.log("Proceeding with OTP request regardless of location result");
+    }
     try {
 
       const cleanedPhone = ap.replace(/\s/g, "");

@@ -28,20 +28,17 @@
 from flask import request, jsonify, Blueprint
 import os
 from dotenv import load_dotenv
-from pymongo import MongoClient
 from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
 from langchain_core.messages import HumanMessage, AIMessage
 from langchain_google_genai import ChatGoogleGenerativeAI
+
+from utils.load_mongo_client import get_db
 
 
 load_dotenv()
 
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
-MONGO_URI = os.getenv("MONGO_URI")
-
-
-client = MongoClient(MONGO_URI)
-db = client["plantdoc"]
+db = get_db()
 col = db["chatbot"]
 
 
