@@ -14,6 +14,7 @@ model_genai = get_model_genai()
 prediction_bp = Blueprint("prediction_bp", __name__)
 db = get_db()
 scans = db["scans"]
+remediations = db["remediations"]
 
 #LEAF_VS_NONLEAF_MODEL_PATH = os.path.join(os.path.dirname(prediction_bp.root_path), "model", "best_leaf_model.keras")
 #leaf_nonleaf_model = load_model(LEAF_VS_NONLEAF_MODEL_PATH)
@@ -39,10 +40,14 @@ def predict():
         coords = True
         if (request.form.get("latitude") is None) or (request.form.get("longitude") is None):
             coords = False
+
         lat = float(request.form.get("latitude"))
         lon = float(request.form.get("longitude"))
+        lang = request.form.get("lang")
+
         img_lnl_array, img_array = preprocess_image(file)  # Use smaller size for leaf vs non-leaf model
         lnl_pred = leaf_nonleaf_model.predict(img_lnl_array)
+
         if lnl_pred[0][0] > 0.5:
             return jsonify({
                 "prediction": "Not a leaf",
@@ -56,6 +61,12 @@ def predict():
         index = np.argmax(pred)
         label = class_names[index]
         confidence = float(pred[0][index])
+
+        cached_remedy = remediations.find_one({
+            "disease_name": label,
+            "language_code": lang
+        })
+
         try:
             scan_document = {
                 "disease_name": label,
@@ -69,24 +80,36 @@ def predict():
         except Exception as e:
             print(f"Error saving scan to database: {e}")
         prompt = f"""
+        You are an expert agricultural botanist.
+        Provide actionable remediation for the plant disease: '{label}'.
+        
+        CRITICAL REQUIREMENT: You MUST translate and write your entire response in the language corresponding to the ISO 639-1 language code: '{lang}'.
         Give response in JSON format:
 
         {{
-        "description": "...",
+        "description": "A 2-sentence description of the disease and its spread.",
         "steps": ["step1", "step2", "step3"]
         }}
-
-        Disease: {label}
         """
-
-        gemini_res = model_genai.generate_content(prompt)
-        raw_text = gemini_res.text.strip()
-
-        if raw_text.startswith("```"):
-            raw_text = raw_text.split("```")[1]
-            if raw_text.startswith("json"):
-                raw_text = raw_text[4:]
-            raw_text = raw_text.strip()
+        if not cached_remedy:
+            try:
+                gemini_res = model_genai.generate_content(prompt)
+                raw_text = gemini_res.text.strip().removeprefix("```json").removesuffix("```").strip()
+                remediations.insert_one({
+                    "disease_name": label,
+                    "language_code": lang,
+                    "remediation_data": raw_text
+                })
+                print(f"Generated and cached new remediation for {label} in language {lang}")
+            except Exception as e:
+                print(f"Error generating remediation: {e}")
+                raw_text = json.dumps({
+                    "description": "Failed to generate remediation data.",
+                    "steps": ["Failed to generate remediation data. Please consult a local expert."]
+                })
+        else:
+            raw_text = cached_remedy["remediation_data"]
+            print(f"Used cached remediation for {label} in language {lang}")
 
         try:
             parsed = json.loads(raw_text)

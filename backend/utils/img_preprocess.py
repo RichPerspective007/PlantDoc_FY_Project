@@ -17,7 +17,7 @@ def preprocess_image(file):
     print(f"Image opened: {img.size}, mode: {img.mode}")
     try:
         img1 = img.resize((224, 224))
-        img2 = img.resize((256, 256), resample=Image.BICUBIC)
+        img2 = img.resize((224, 224), resample=Image.BICUBIC)
     except Exception as e:
         print(f"Error resizing image: {e}")
         raise

@@ -10,6 +10,6 @@ def get_leaf_nonleaf_model():
     return model    
 
 def get_prediction_model():
-    model_path = hf_hub_download(repo_id="Plant-Disease-Detection-Team/leaf_disease_models", filename="plant_disease.keras")
+    model_path = hf_hub_download(repo_id="Plant-Disease-Detection-Team/leaf_disease_models", filename="plantdoc_disease_model.keras")
     model = keras.saving.load_model(model_path)
     return model

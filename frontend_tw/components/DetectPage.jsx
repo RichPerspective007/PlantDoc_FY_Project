@@ -5,6 +5,7 @@ import { useAppContext } from "../src/context/AppContext";
 import { useNavigate } from "react-router-dom";
 import { CameraModal } from "./CameraModal";
 import { AgriBotChat } from "./AgriBotChat";
+import imageCompression from "browser-image-compression";
 
 
 export function DetectPg() {
@@ -48,11 +49,35 @@ export function DetectPg() {
   }, [coords.latitude, coords.longitude]);
 
   // ── HANDLERS ──
-  const load = (f) => {
+  const load = async (f) => {
     if (!f) return;
-    setFile(f);
-    setImg(URL.createObjectURL(f));
-    setRes(null);
+    
+    // Set busy state so the user knows something is happening during the 0.5s compression
+    setBusy(true); 
+    
+    try {
+      const options = {
+        maxSizeMB: 1,             // Maximum file size (1MB is plenty for ML inference)
+        maxWidthOrHeight: 1024,   // Resize large images to 1024px max
+        useWebWorker: true,       // Run in background to prevent UI freezing
+      };
+      
+      const compressedFile = await imageCompression(f, options);
+      
+      console.log(`Original: ${(f.size / 1024 / 1024).toFixed(2)} MB -> Compressed: ${(compressedFile.size / 1024 / 1024).toFixed(2)} MB`);
+      
+      setFile(compressedFile);
+      setImg(URL.createObjectURL(compressedFile));
+      setRes(null);
+    } catch (error) {
+      console.error("Compression failed, using original file:", error);
+      // Fallback: If compression fails for any reason, just use the original file
+      setFile(f);
+      setImg(URL.createObjectURL(f));
+      setRes(null);
+    } finally {
+      setBusy(false);
+    }
   };
 
   const drop = (e) => {
@@ -76,6 +101,7 @@ export function DetectPg() {
       formData.append("file", file);
       formData.append("latitude", finalCoords.latitude);
       formData.append("longitude", finalCoords.longitude);
+      formData.append("lang", currentLanguage.code);
       
       const response = await fetch(`${import.meta.env.VITE_API_URL}/predict`, {
         method: "POST",
@@ -198,7 +224,7 @@ export function DetectPg() {
           {res && (
             <div className="w-full max-w-2xl mx-auto p-6 bg-white border-l-4 border-red-500 rounded-xl shadow-sm animate-in slide-in-from-bottom-4">
               <div className="flex items-center justify-between mb-3">
-                <span className="text-xl font-bold text-red-700">⚠️ {res.d}</span>
+                <span className="text-xl font-bold text-red-700">⚠️ {res.d.replace(/_/g, ' ')}</span>
                 <span className="px-3 py-1 text-xs font-bold text-emerald-800 bg-emerald-100 rounded-full border border-emerald-200">{res.c}</span>
               </div>
               <p className="mb-5 text-sm leading-relaxed text-slate-600">{res.desc}</p>
@@ -213,11 +239,42 @@ export function DetectPg() {
             </div>
           )}
           
-          {locOutbreak && (
-            <div className="w-full max-w-2xl mx-auto p-5 bg-amber-50 border border-amber-200 rounded-xl shadow-sm">
-              <p className="text-sm font-medium text-amber-900 leading-relaxed">
-                In your area, there have been <span className="font-bold">{locOutbreak.threat_count} scans</span> of <span className="font-bold">{locOutbreak.top_threat}</span> recently. Stay vigilant and consider preventive measures.
-              </p>
+          {locOutbreak && locOutbreak.total_local_scans > 0 && (
+            <div className="w-full max-w-2xl mx-auto bg-white border border-red-200 rounded-xl shadow-md overflow-hidden">
+              {/* Header Banner */}
+              <div className="bg-red-50 px-5 py-3 border-b border-red-100 flex items-center justify-between">
+                <h3 className="text-red-800 font-bold flex items-center gap-2">
+                  <span className="text-xl">⚠️</span> Localized Outbreak Alert
+                </h3>
+                <span className="text-xs font-semibold text-red-600 bg-red-100 px-2 py-1 rounded-full shadow-sm">
+                  15km Radius
+                </span>
+              </div>
+              
+              {/* Data Body */}
+              <div className="p-5">
+                <div className="flex justify-between items-end mb-4">
+                  {/* Threat Name (Parsing out the underscores) */}
+                  <div>
+                    <p className="text-xs text-gray-500 uppercase tracking-wide font-semibold">Primary Regional Threat</p>
+                    <p className="text-2xl font-black text-gray-900 mt-1 capitalize">
+                      {locOutbreak.top_threat.replace(/___/g, ' - ').replace(/_/g, ' ')}
+                    </p>
+                  </div>
+                  
+                  {/* Threat Ratio */}
+                  <div className="text-right">
+                    <p className="text-xs text-gray-500 uppercase tracking-wide font-semibold">Threat Concentration</p>
+                    <p className="text-2xl font-bold text-red-600 mt-1">
+                      {locOutbreak.threat_count} <span className="text-base text-gray-400 font-medium">/ {locOutbreak.total_local_scans} scans</span>
+                    </p>
+                  </div>
+                </div>
+                
+                <p className="text-sm text-gray-600 border-t border-gray-100 pt-3 mt-3">
+                  This pathogen is highly active in your immediate vicinity. Preventative measures and immediate field scouting are strongly recommended.
+                </p>
+              </div>
             </div>
           )}
         </div>

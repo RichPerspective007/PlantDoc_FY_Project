@@ -1,8 +1,11 @@
 import { LANGUAGES } from "../data/LangTrans";
 import { useNavigate } from "react-router-dom";
+import { useAppContext } from "../src/context/AppContext";
+  
 
 export function LangPg({ translations, tempLang, setTempLang, onConfirm }) {
   const navigate = useNavigate();
+  const { setLang } = useAppContext();
 
   return (
     // min-h-screen ensures full height, bg-slate-50 replaces '--cream'
