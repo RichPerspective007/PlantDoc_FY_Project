@@ -51,7 +51,7 @@ def predict():
         if lnl_pred[0][0] > 0.5:
             return jsonify({
                 "prediction": "Not a leaf",
-                "confidence": float(1 - lnl_pred[0][0]),
+                "confidence": float(lnl_pred[0][0]),
                 "description": "The uploaded image does not appear to be a leaf.",
                 "steps": []
             })
