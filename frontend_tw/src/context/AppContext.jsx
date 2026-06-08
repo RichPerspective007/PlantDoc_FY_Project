@@ -13,12 +13,12 @@ export function AppProvider({ children }) {
 
   // On initial load, check if user is already logged in via localStorage
   useEffect(() => {
-    const token = localStorage.getItem("token");
+    /*const token = localStorage.getItem("token");*/
     const savedName = localStorage.getItem("name");
-    const savedPhone = localStorage.getItem("phone_number");
+    //const savedPhone = localStorage.getItem("phone_number");
 
-    if (token && savedName && savedPhone) {
-      setUser({ name: savedName, phone_number: savedPhone });
+    if (savedName) {
+      setUser({ name: savedName });
     }
     setLoading(false);
   }, []);
@@ -28,9 +28,7 @@ export function AppProvider({ children }) {
   };
 
   const logout = () => {
-    localStorage.removeItem("token");
-    localStorage.removeItem("name");
-    localStorage.removeItem("phone_number");
+    localStorage.clear()
     setUser(null);
   };
 

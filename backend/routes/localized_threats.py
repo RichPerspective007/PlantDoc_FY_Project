@@ -1,4 +1,5 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, g
+from utils.wrappers import token_required
 from utils.load_mongo_client import get_db
 db = get_db()
 scans = db["scans"]
@@ -6,6 +7,7 @@ scans = db["scans"]
 localized_threats_bp = Blueprint("localized_threats_bp", __name__)
 
 @localized_threats_bp.route("/local-pulse", methods=["GET"])
+@token_required
 def get_local_pulse():
     # PyMongo Geospatial Aggregation Pipeline
     lat = float(request.args.get("lat"))

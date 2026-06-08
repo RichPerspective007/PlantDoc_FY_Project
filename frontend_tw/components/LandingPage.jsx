@@ -5,7 +5,7 @@ import { Navbar } from "./Navbar";
 
 export function Landing() {
   // Pulling state globally instead of relying on props
-  const { translations, lang } = useAppContext();
+  const { translations, lang, logout } = useAppContext();
   
   // React Router's native navigation hook
   const navigate = useNavigate();
@@ -71,6 +71,12 @@ export function Landing() {
           </button>
 
         </div>
+        <button 
+            onClick={() => logout()}
+            className="px-7 py-3.5 text-sm font-bold tracking-wide transition-all translate-y-0 rounded-full shadow-lg text-slate-50 bg-red-500 hover:bg-red-600 hover:-translate-y-1 hover:shadow-emerald-900/50"
+          >
+            Logout
+          </button>
       </div>
     </div>
   );

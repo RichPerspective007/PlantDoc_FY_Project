@@ -1,4 +1,5 @@
-from flask import Blueprint, request, jsonify
+from flask import Blueprint, request, jsonify, g
+from utils.wrappers import token_required
 from PIL import Image
 from datetime import datetime, UTC
 import os
@@ -16,14 +17,8 @@ db = get_db()
 scans = db["scans"]
 remediations = db["remediations"]
 
-#LEAF_VS_NONLEAF_MODEL_PATH = os.path.join(os.path.dirname(prediction_bp.root_path), "model", "best_leaf_model.keras")
-#leaf_nonleaf_model = load_model(LEAF_VS_NONLEAF_MODEL_PATH)
 leaf_nonleaf_model = get_leaf_nonleaf_model()
-#MODEL_PATH = os.path.join(os.path.dirname(prediction_bp.root_path), "model", "plant_disease.keras")
-IMAGE_SIZE = 256
 
-# Load model 
-#model = load_model(MODEL_PATH)
 model = get_prediction_model()  # Load the plant disease model
 
 # Load class names
@@ -31,6 +26,7 @@ with open(os.path.join(os.path.dirname(prediction_bp.root_path), "data", "class_
     class_names = json.load(f)
 
 @prediction_bp.route("/predict", methods=["POST"])
+@token_required
 def predict():
     try:
         if "file" not in request.files:
@@ -45,8 +41,8 @@ def predict():
         lon = float(request.form.get("longitude"))
         lang = request.form.get("lang")
 
-        img_lnl_array, img_array = preprocess_image(file)  # Use smaller size for leaf vs non-leaf model
-        lnl_pred = leaf_nonleaf_model.predict(img_lnl_array)
+        img_array = preprocess_image(file)
+        lnl_pred = leaf_nonleaf_model.predict(img_array)
 
         if lnl_pred[0][0] > 0.5:
             return jsonify({
@@ -80,17 +76,16 @@ def predict():
         except Exception as e:
             print(f"Error saving scan to database: {e}")
         prompt = f"""
-        You are an expert agricultural botanist.
-        Provide actionable remediation for the plant disease: '{label}'.
-        
-        CRITICAL REQUIREMENT: You MUST translate and write your entire response in the language corresponding to the ISO 639-1 language code: '{lang}'.
-        Give response in JSON format:
+            You are an expert agricultural botanist.
+            Provide actionable remediation for the plant disease: '{label}'.
+            
+            CRITICAL REQUIREMENT: You MUST translate and write your entire response in the language corresponding to the ISO 639-1 language code: '{lang}'.
+            Give response in JSON format:
 
-        {{
-        "description": "A 2-sentence description of the disease and its spread.",
-        "steps": ["step1", "step2", "step3"]
-        }}
-        """
+            {{
+                "description": "A 2-sentence description of the disease and its spread.",
+                "steps": ["step1", "step2", "step3"]
+            }}"""
         if not cached_remedy:
             try:
                 gemini_res = model_genai.generate_content(prompt)

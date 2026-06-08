@@ -11,7 +11,7 @@ import imageCompression from "browser-image-compression";
 export function DetectPg() {
   // ── STATES ──
   const { coords, error, loading, getLocation } = useFarmerLocation();
-  const { translations, lang, setLang, user } = useAppContext();
+  const { translations, lang, setLang, user, setUser } = useAppContext();
   const navigate = useNavigate();
   const [img, setImg] = useState(null);
   const [file, setFile] = useState(null);
@@ -35,14 +35,21 @@ export function DetectPg() {
 
   useEffect(() => {
     if (coords.latitude && coords.longitude) {
-      fetch(`${import.meta.env.VITE_API_URL}/local-pulse?lat=${coords.latitude}&lon=${coords.longitude}`)
+      fetch(`${import.meta.env.VITE_API_URL}/local-pulse?lat=${coords.latitude}&lon=${coords.longitude}`,
+        {credentials: "include"}
+      )
         .then(r => r.json())
         .then(data => setLocOutbreak({
           total_local_scans: data.total_local_scans,
           top_threat: data.top_threat,
           threat_count: data.threat_count
         }))
-        .catch(console.error);
+        .catch(err => {
+          if (err.response?.status === 401) {
+            localStorage.clear();
+            setUser(null);
+          }
+        });
     } else {
       console.log("Waiting for GPS lock to fetch local outbreak info...");
     }
@@ -105,7 +112,16 @@ export function DetectPg() {
       
       const response = await fetch(`${import.meta.env.VITE_API_URL}/predict`, {
         method: "POST",
-        body: formData
+        body: formData,
+        credentials: "include"
+      }).catch(err => {
+        if (err.response?.status === 401) {
+          localStorage.clear();
+          setUser(null);
+        } else {
+          console.error("Error during analysis:", err);
+          alert("An error occurred during analysis. Please try again.");
+        }
       });
       const data = await response.json();
       

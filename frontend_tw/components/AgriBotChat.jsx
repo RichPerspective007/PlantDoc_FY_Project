@@ -3,7 +3,7 @@ import { useAppContext } from "../src/context/AppContext";
 
 export function AgriBotChat({ diseaseResult }) {
   // Global context instead of props
-  const { translations, lang, user } = useAppContext();
+  const { translations, lang, user, setUser } = useAppContext();
 
   // Local Chat State
   const [msgs, setMsgs] = useState([{ r: "b", txt: translations.chatBotResponses?.default || "Hello! How can I help you with your crops today?" }]);
@@ -35,10 +35,19 @@ export function AgriBotChat({ diseaseResult }) {
   useEffect(() => {
     if (!user?.name) return;
     setLoadingHist(true);
-    fetch(`${import.meta.env.VITE_API_URL}/showconvolist?phone_number=${user.phone_number}`)
+    fetch(`${import.meta.env.VITE_API_URL}/showconvolist`,{
+      credentials: "include" // Important for cookie-based sessions
+    })
       .then(r => r.json())
       .then(ids => setSessions(ids))
-      .catch(console.error)
+      .catch(err => {
+        if (err.response?.status === 401) {
+          localStorage.clear();
+          setUser(null);
+        } else {
+          console.error("Error fetching session history:", err);
+        }
+      })
       .finally(() => setLoadingHist(false));
   }, [user]);
 
@@ -46,7 +55,14 @@ export function AgriBotChat({ diseaseResult }) {
   const loadSession = async (sid) => {
     setActive(sid);
     try {
-      const r = await fetch(`${import.meta.env.VITE_API_URL}/internalconvo?phone_number=${user.phone_number}&session_id=${sid}`);
+      const r = await fetch(`${import.meta.env.VITE_API_URL}/internalconvo?session_id=${sid}`,{
+        credentials: "include" // Important for cookie-based sessions
+      }).catch(err => {
+        if (err.response?.status === 401) {
+          localStorage.clear();
+          setUser(null);
+        }
+      });
       const data = await r.json();
       setMsgs(data.map(m => ({ r: m.role === "human" ? "u" : "b", txt: m.text })));
       sessionId.current = sid;
@@ -76,10 +92,15 @@ export function AgriBotChat({ diseaseResult }) {
         body: JSON.stringify({
           message: m,
           disease: diseaseResult || null, // Passes the current disease if one is on screen
-          phone_number: user.phone_number,
           session_id: sessionId.current,
           language: lang
-        })
+        }),
+        credentials: "include" // Important for cookie-based sessions
+      }).catch(err => {
+        if (err.response?.status === 401) {
+          localStorage.clear();
+          setUser(null);
+        }
       });
       const data = await response.json();
       setTyping(false);

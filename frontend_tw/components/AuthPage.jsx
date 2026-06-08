@@ -77,20 +77,20 @@ export function AuthPg() {
           name: name,
           phone_number: `+91${cleanedPhone}`,
           otp_code: otp
-        })
+        }),
+        credentials: "include"
       });
 
       const data = await res.json();
       
       if (res.status === 200) {
-        // 1. Persist to Local Storage
-        localStorage.setItem("phone_number", `+91${cleanedPhone}`);
+        //localStorage.setItem("phone_number", `+91${cleanedPhone}`);
         localStorage.setItem("name", name);
-        if (data.token) {
+        /*if (data.token) {
           localStorage.setItem("token", data.token);
         } else {
-          localStorage.setItem("token", "verified_session_active"); // Fallback token
-        }
+          localStorage.setItem("token", "verified_session_active");
+        }*/
         
         // 2. Push to Global Context
         login({ name, phone_number: `+91${cleanedPhone}` });

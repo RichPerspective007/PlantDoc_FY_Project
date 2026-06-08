@@ -1,4 +1,4 @@
-from flask import request, jsonify, Blueprint
+from flask import request, jsonify, Blueprint, make_response
 import os
 import jwt
 import datetime
@@ -16,6 +16,9 @@ users_collection = db["users"]
 client = Client(os.getenv("TWILIO_ACCOUNT_SID"), os.getenv("TWILIO_AUTH_TOKEN"))
 
 start_verification_bp = Blueprint("start_verification_bp", __name__)
+check_verification_bp = Blueprint("check_verification_bp", __name__)
+profile_bp = Blueprint("profile_bp", __name__)
+
 
 @start_verification_bp.route("/start_verification", methods=["POST"])
 def start_verify():
@@ -34,11 +37,18 @@ def start_verify():
 
     return jsonify({"status": verification.status, **response_dict}) # returns 'pending'
 
-check_verification_bp = Blueprint("check_verification_bp", __name__)
-
 @check_verification_bp.route('/check-verify', methods=['POST'])
 def check_verify():
-
+    '''if request.method == "OPTIONS":
+        response = make_response()
+        # Dynamically grab the origin (handles both localhost and 127.0.0.1)
+        origin = request.headers.get("Origin", "http://localhost:5173")
+        
+        response.headers.add("Access-Control-Allow-Origin", origin)
+        response.headers.add("Access-Control-Allow-Headers", "Content-Type, Authorization")
+        response.headers.add("Access-Control-Allow-Methods", "POST, OPTIONS")
+        response.headers.add("Access-Control-Allow-Credentials", "true")
+        return response, 200'''
     name = request.json.get("name")
     phone = request.json.get('phone_number')
     code = request.json.get('otp_code')
@@ -51,54 +61,52 @@ def check_verify():
     )
 
     if verification_check.status == 'approved':
-
         existing_user = users_collection.find_one({
             "phone_number": phone
         })
 
         if not existing_user:
-
             users_collection.insert_one({
                 "name": name,
                 "phone_number": phone
             })
-
         else:
             name = existing_user["name"]
 
         token = jwt.encode(
             {
-                "name": name,
                 "phone_number": phone,
 
                 "exp": datetime.datetime.utcnow()
-                + datetime.timedelta(seconds=10)
-
+                + datetime.timedelta(days = 30)
             },
-
             os.getenv("JWT_SECRET"),
-
-            algorithm="HS256"
+            algorithm=os.getenv("JWT_ALGORITHM", "HS256")
         )
 
-        return jsonify({
+        response = make_response(jsonify({
             "message": "Login Successful",
-            "name": name,
-            "phone_number": phone,
-            "token": token
-        }), 200
+        }))
+        response.set_cookie(
+            key = 'access_token',
+            value = token,
+            httponly = True, # Set to True in production for security
+            secure = False, # Set to True in production for HTTPS
+            samesite = 'Lax', # Adjust as needed (e.g., 'Strict' or 'None')
+            max_age = 30 * 24 * 60 * 60 # 30 days
+        )
+
+        return response, 200
 
     return jsonify({
         "message": "Invalid Code"
     }), 401
 
-@check_verification_bp.route("/profile")
+@profile_bp.route("/profile")
 def profile():
-
     auth_header = request.headers.get("Authorization")
 
     if not auth_header:
-
         return jsonify({
             "message": "No token"
         }), 401
@@ -106,11 +114,10 @@ def profile():
     token = auth_header.split(" ")[1]
 
     try:
-
         decoded = jwt.decode(
             token,
             os.getenv("JWT_SECRET"),
-            algorithms=["HS256"]
+            algorithms=[os.getenv("JWT_ALGORITHM", "HS256")]
         )
 
         return jsonify({
@@ -129,3 +136,4 @@ def profile():
         return jsonify({
             "message": "Invalid token"
         }), 401
+
